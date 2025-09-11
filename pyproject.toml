@@ -14,7 +14,7 @@ dependencies = [
     "typer>=0.17.4",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "aresponses>=3.0.0",
     "mypy>=1.17.1",
