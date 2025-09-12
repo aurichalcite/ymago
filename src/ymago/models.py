@@ -6,31 +6,47 @@ data structures used throughout the application.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class GenerationJob(BaseModel):
     """
-    Represents a single image generation job with all required parameters.
+    Represents a single media generation job with all required parameters.
 
-    This model encapsulates all the information needed to generate an image,
+    This model encapsulates all the information needed to generate images or videos,
     including the prompt, model configuration, and generation parameters.
     """
 
     prompt: str = Field(
         ...,
-        description="Text prompt for image generation",
+        description="Text prompt for media generation",
         min_length=1,
         max_length=2000,
     )
 
+    media_type: Literal["image", "video"] = Field(
+        default="image",
+        description="Type of media to generate (image or video)",
+    )
+
     seed: Optional[int] = Field(
         default=None,
-        description="Random seed for reproducible generation",
-        ge=0,
+        description="Random seed for reproducible generation (-1 for random)",
+        ge=-1,
         le=2**32 - 1,
+    )
+
+    negative_prompt: Optional[str] = Field(
+        default=None,
+        description="Text describing what not to include in the generated media",
+        max_length=1000,
+    )
+
+    from_image: Optional[str] = Field(
+        default=None,
+        description="URL of source image for image-to-image/image-to-video generation",
     )
 
     image_model: str = Field(
@@ -38,21 +54,26 @@ class GenerationJob(BaseModel):
         description="AI model to use for image generation",
     )
 
+    video_model: str = Field(
+        default="veo-3.0-generate-001",
+        description="AI model to use for video generation",
+    )
+
     output_filename: Optional[str] = Field(
         default=None,
-        description="Custom filename for the generated image (without extension)",
+        description="Custom filename for the generated media (without extension)",
     )
 
     quality: Optional[str] = Field(
         default="standard",
-        description="Image quality setting",
+        description="Media quality setting",
         pattern="^(draft|standard|high)$",
     )
 
     aspect_ratio: Optional[str] = Field(
         default="1:1",
-        description="Aspect ratio for the generated image",
-        pattern="^(1:1|16:9|9:16|4:3|3:4)$",
+        description="Aspect ratio for the generated media",
+        pattern=r"^\d+:\d+$",
     )
 
     @field_validator("prompt")
@@ -63,6 +84,48 @@ class GenerationJob(BaseModel):
         if not cleaned:
             raise ValueError("Prompt cannot be empty or only whitespace")
         return cleaned
+
+    @field_validator("negative_prompt")
+    @classmethod
+    def validate_negative_prompt(cls, v: Optional[str]) -> Optional[str]:
+        """Validate and clean the negative prompt text."""
+        if v is None:
+            return v
+        cleaned = v.strip()
+        return cleaned if cleaned else None
+
+    @field_validator("from_image")
+    @classmethod
+    def validate_from_image(cls, v: Optional[str]) -> Optional[str]:
+        """Validate source image URL if provided."""
+        if v is None:
+            return v
+
+        from urllib.parse import urlparse
+
+        cleaned = v.strip()
+        if not cleaned:
+            return None
+
+        # Basic URL validation
+        try:
+            parsed = urlparse(cleaned)
+            if not parsed.scheme or not parsed.netloc:
+                raise ValueError("Invalid URL format for source image")
+            if parsed.scheme not in ("http", "https"):
+                raise ValueError("Source image URL must use http or https")
+        except Exception as e:
+            raise ValueError(f"Invalid source image URL: {e}") from e
+
+        return cleaned
+
+    @field_validator("seed")
+    @classmethod
+    def validate_seed(cls, v: Optional[int]) -> Optional[int]:
+        """Validate seed value, converting -1 to None for random generation."""
+        if v == -1:
+            return None
+        return v
 
     @field_validator("output_filename")
     @classmethod
@@ -85,19 +148,29 @@ class GenerationJob(BaseModel):
 
         return cleaned
 
+    @property
+    def model_name(self) -> str:
+        """Get the appropriate model name based on media type."""
+        return self.video_model if self.media_type == "video" else self.image_model
+
+    @property
+    def file_extension(self) -> str:
+        """Get the appropriate file extension based on media type."""
+        return ".mp4" if self.media_type == "video" else ".png"
+
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
 class GenerationResult(BaseModel):
     """
-    Represents the result of a completed image generation job.
+    Represents the result of a completed media generation job.
 
     This model contains the output information from a successful generation,
     including file paths and metadata about the generation process.
     """
 
     local_path: Path = Field(
-        ..., description="Local filesystem path where the generated image is stored"
+        ..., description="Local filesystem path where the generated media is stored"
     )
 
     metadata: Dict[str, Any] = Field(
@@ -110,11 +183,11 @@ class GenerationResult(BaseModel):
     )
 
     file_size_bytes: Optional[int] = Field(
-        default=None, description="Size of the generated image file in bytes", ge=0
+        default=None, description="Size of the generated media file in bytes", ge=0
     )
 
     generation_time_seconds: Optional[float] = Field(
-        default=None, description="Time taken to generate the image in seconds", ge=0.0
+        default=None, description="Time taken to generate the media in seconds", ge=0.0
     )
 
     @field_validator("local_path")

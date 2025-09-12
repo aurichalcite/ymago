@@ -6,6 +6,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../src"))  # adjust if needed
+
 project = "Ymago"
 copyright = "2025, Andrej Mäsiar"
 author = "Andrej Mäsiar"
@@ -38,8 +43,11 @@ autodoc_default_options = {
     "inherited-members": True,
     "show-inheritance": True,
 }
+extensions.append("sphinx.ext.autodoc.typehints")
+typehints_fully_qualified = False
 
-html_theme = "sphinx_rtd_theme"
+
+html_theme = "furo"
 
 # Allow Markdown with MyST
 myst_enable_extensions = [
