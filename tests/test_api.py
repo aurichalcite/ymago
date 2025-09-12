@@ -6,7 +6,7 @@ error handling, and response processing.
 """
 
 import base64
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -311,7 +311,7 @@ class TestValidateApiKey:
     @pytest.mark.asyncio
     async def test_validate_api_key_success(self):
         """Test API key validation with successful generation."""
-        with patch("ymago.api.generate_image") as mock_generate:
+        with patch("ymago.api.generate_image", new_callable=AsyncMock) as mock_generate:
             mock_generate.return_value = b"fake_image_data"
 
             result = await validate_api_key("valid_api_key")
@@ -326,7 +326,7 @@ class TestValidateApiKey:
     @pytest.mark.asyncio
     async def test_validate_api_key_failure(self):
         """Test API key validation with failed generation."""
-        with patch("ymago.api.generate_image") as mock_generate:
+        with patch("ymago.api.generate_image", new_callable=AsyncMock) as mock_generate:
             mock_generate.side_effect = APIError("Invalid API key")
 
             result = await validate_api_key("invalid_api_key")

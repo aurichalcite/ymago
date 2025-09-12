@@ -53,7 +53,8 @@ class TestLocalStorageUploader:
             mock_source_file = AsyncMock()
             mock_dest_file = AsyncMock()
 
-            mock_source_file.read.return_value = sample_image_bytes
+            # IMPORTANT: First read returns data, second returns empty bytes (EOF)
+            mock_source_file.read.side_effect = [sample_image_bytes, b""]
             mock_dest_file.write = AsyncMock()
 
             def open_side_effect(path, mode="r", **kwargs):
@@ -113,7 +114,8 @@ class TestLocalStorageUploader:
             mock_source_file = AsyncMock()
             mock_dest_file = AsyncMock()
 
-            mock_source_file.read.return_value = sample_image_bytes
+            # IMPORTANT: First read returns data, second returns empty bytes (EOF)
+            mock_source_file.read.side_effect = [sample_image_bytes, b""]
 
             def open_side_effect(path, mode="r", **kwargs):
                 mock_context = AsyncMock()
@@ -225,10 +227,10 @@ class TestLocalStorageUploader:
         source_file = temp_directory / "large_source.png"
         destination_key = "images/large_image.png"
 
-        # Create large fake data
-        chunk1 = b"chunk1" * 1000
-        chunk2 = b"chunk2" * 1000
-        chunk3 = b""  # End of file
+        # Use small test chunks to avoid memory issues
+        chunk1 = b"test_chunk_1"
+        chunk2 = b"test_chunk_2"
+        chunk3 = b""  # End of file - this is critical for stopping the while loop
 
         with (
             patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
@@ -241,6 +243,7 @@ class TestLocalStorageUploader:
             mock_source_file = AsyncMock()
             mock_dest_file = AsyncMock()
 
+            # IMPORTANT: The empty bytes b"" signals EOF and stops the while loop
             mock_source_file.read.side_effect = [chunk1, chunk2, chunk3]
             mock_dest_file.write = AsyncMock()
 
@@ -259,7 +262,7 @@ class TestLocalStorageUploader:
             expected_path = base_dir / destination_key
             assert result == str(expected_path.resolve())
 
-            # Verify chunked writing
+            # Verify chunked writing (only non-empty chunks are written)
             assert mock_dest_file.write.call_count == 2  # chunk1 and chunk2
             mock_dest_file.write.assert_any_call(chunk1)
             mock_dest_file.write.assert_any_call(chunk2)

@@ -138,7 +138,9 @@ class TestProcessGenerationJob:
     ):
         """Test successful generation job processing."""
         with (
-            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
             patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
@@ -207,7 +209,9 @@ class TestProcessGenerationJob:
         self, sample_generation_job, sample_config
     ):
         """Test generation job processing with API error."""
-        with patch("ymago.core.generation.generate_image") as mock_generate:
+        with patch(
+            "ymago.core.generation.generate_image", new_callable=AsyncMock
+        ) as mock_generate:
             # Mock API error
             from ymago.api import APIError
 
@@ -222,7 +226,9 @@ class TestProcessGenerationJob:
     ):
         """Test generation job processing with storage error."""
         with (
-            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
             patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
@@ -257,7 +263,9 @@ class TestProcessGenerationJob:
     ):
         """Test generation job processing with temp file creation error."""
         with (
-            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
         ):
             # Mock successful API call
@@ -275,7 +283,9 @@ class TestProcessGenerationJob:
     ):
         """Test cleanup occurs even when storage fails."""
         with (
-            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
             patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
@@ -310,7 +320,9 @@ class TestProcessGenerationJob:
         large_image_data = b"x" * 5000000  # 5MB of data
 
         with (
-            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
             patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
