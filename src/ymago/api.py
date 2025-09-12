@@ -126,9 +126,12 @@ async def generate_image(
             f"Generating image with model {model}, prompt length: {len(prompt)}"
         )
 
-        # Make the API call
+        # Make the API call with additional parameters
         response = await asyncio.to_thread(
-            client.models.generate_content, model=model, contents=[prompt.strip()]
+            client.models.generate_content,
+            model=model,
+            contents=[prompt.strip()],
+            **params,
         )
 
         # Validate response structure
