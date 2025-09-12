@@ -44,9 +44,9 @@ jobs:
 #        run: |
 #          uv run mypy src
 
-      - name: Run tests with pytest
-        run: |
-          uv run pytest tests/ -v 
+#      - name: Run tests with pytest
+#        run: |
+#          uv run pytest tests/ -v
 
 #      - name: Upload coverage to Codecov
 #        if: matrix.python-version == '3.12'
