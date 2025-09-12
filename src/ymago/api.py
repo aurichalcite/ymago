@@ -157,7 +157,7 @@ async def generate_image(
 
         # Look for image parts in the content
         image_data = None
-        if hasattr(content, "parts"):
+        if hasattr(content, "parts") and content.parts is not None:
             for part in content.parts:
                 if hasattr(part, "inline_data") and part.inline_data:
                     if hasattr(part.inline_data, "data"):
