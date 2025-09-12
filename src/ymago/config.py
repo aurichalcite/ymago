@@ -95,7 +95,7 @@ async def load_config() -> Settings:
                 raise ValueError(f"Error reading config file {config_path}: {e}") from e
 
     # Apply environment variable overrides
-    env_overrides = {}
+    env_overrides: dict[str, dict[str, str]] = {}
 
     # Google API key from environment
     google_api_key = os.getenv("GOOGLE_API_KEY")

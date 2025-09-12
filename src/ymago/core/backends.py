@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Execution backend abstraction for ymago package.
 
@@ -9,8 +11,9 @@ to support distributed execution, cloud functions, etc.
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Any, Awaitable, Callable, List
 
+from ..config import Settings
 from ..models import GenerationJob, GenerationResult
 
 
@@ -41,7 +44,7 @@ class ExecutionBackend(ABC):
         pass
 
     @abstractmethod
-    async def get_status(self) -> dict:
+    async def get_status(self) -> dict[str, Any]:
         """
         Get the current status of the execution backend.
 
@@ -93,11 +96,11 @@ class LocalExecutionBackend(ExecutionBackend):
             raise ValueError("Jobs list cannot be empty")
 
         # Import here to avoid circular imports
-        from ..config import load_config
+        from ..config import Settings, load_config
         from ..core.generation import process_generation_job
 
         # Load configuration once for all jobs
-        config = await load_config()
+        config: Settings = await load_config()
 
         # Create tasks for concurrent execution
         tasks = []
@@ -110,13 +113,14 @@ class LocalExecutionBackend(ExecutionBackend):
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Process results and handle exceptions
-            final_results = []
+            final_results: list[GenerationResult] = []
             for _i, result in enumerate(results):
-                if isinstance(result, Exception):
+                if isinstance(result, GenerationResult):
+                    final_results.append(result)
+                elif isinstance(result, Exception):
                     # For now, re-raise the exception
                     # In a production system, you might want to return error results
                     raise result
-                final_results.append(result)
 
             return final_results
 
@@ -124,7 +128,10 @@ class LocalExecutionBackend(ExecutionBackend):
             raise RuntimeError(f"Job execution failed: {e}") from e
 
     async def _execute_single_job(
-        self, job: GenerationJob, config, process_func
+        self,
+        job: GenerationJob,
+        config: Settings,
+        process_func: Callable[[GenerationJob, Settings], Awaitable[GenerationResult]],
     ) -> GenerationResult:
         """
         Execute a single job with semaphore-controlled concurrency.
@@ -156,7 +163,7 @@ class LocalExecutionBackend(ExecutionBackend):
                 self._active_jobs -= 1
                 self._total_jobs_executed += 1
 
-    async def get_status(self) -> dict:
+    async def get_status(self) -> dict[str, Any]:
         """Get the current status of the local execution backend."""
         return {
             "backend_type": "local",

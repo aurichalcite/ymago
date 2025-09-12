@@ -17,7 +17,7 @@ from rich.table import Table
 
 from .config import load_config
 from .core.generation import process_generation_job
-from .models import GenerationJob
+from .models import GenerationJob, GenerationResult
 
 # Create the main Typer application
 app = typer.Typer(
@@ -83,7 +83,7 @@ def generate_image_command(
         ymago image generate "Abstract art" --quality high --aspect-ratio 16:9
     """
 
-    async def _async_generate():
+    async def _async_generate() -> None:
         try:
             # Load configuration
             with Status("Loading configuration...", console=console) as status:
@@ -148,7 +148,7 @@ def _display_job_info(job: GenerationJob) -> None:
     console.print()
 
 
-def _display_success(result, verbose: bool = False) -> None:
+def _display_success(result: "GenerationResult", verbose: bool = False) -> None:
     """Display success message with result information."""
     # Main success message
     console.print("[green]✓ Image generated successfully![/green]")
@@ -189,7 +189,7 @@ def config_command(
 ) -> None:
     """Display current configuration."""
 
-    async def _async_config():
+    async def _async_config() -> None:
         try:
             config = await load_config()
 
