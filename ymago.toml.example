@@ -1,0 +1,77 @@
+# Ymago Configuration File
+# 
+# This is an example configuration file for ymago. Copy this file to either:
+# - ./ymago.toml (in your current working directory)
+# - ~/.ymago.toml (in your home directory)
+#
+# You can also set configuration values using environment variables:
+# - GOOGLE_API_KEY: Your Google Generative AI API key
+# - YMAGO_OUTPUT_PATH: Directory for saving generated images
+# - YMAGO_IMAGE_MODEL: Default AI model for image generation
+
+[auth]
+# Google Generative AI API key (required)
+# Get your API key from: https://aistudio.google.com/app/apikey
+# You can also set this using the GOOGLE_API_KEY environment variable
+google_api_key = "your-google-api-key-here"
+
+[defaults]
+# Default AI model for image generation
+# Available models:
+# - "gemini-2.5-flash-image-preview" (recommended, fast and high quality)
+# - Other Gemini models as they become available
+image_model = "gemini-2.5-flash-image-preview"
+
+# Default output directory for generated images
+# Can be an absolute path or relative to current directory
+# The directory will be created if it doesn't exist
+# You can also set this using the YMAGO_OUTPUT_PATH environment variable
+output_path = "./generated_images"
+
+# Example configurations for different use cases:
+
+# For development/testing:
+# output_path = "./test_images"
+
+# For production with absolute path:
+# output_path = "/home/user/ai_generated_images"
+
+# For Windows users:
+# output_path = "C:\\Users\\YourName\\Documents\\AI_Images"
+
+# Advanced Configuration Examples:
+# 
+# If you want to organize images by date:
+# output_path = "./images/2024"
+#
+# If you want to use a cloud storage mount:
+# output_path = "/mnt/cloud-storage/ai-images"
+#
+# Environment Variable Examples:
+# 
+# In your shell or .bashrc/.zshrc:
+# export GOOGLE_API_KEY="your-actual-api-key"
+# export YMAGO_OUTPUT_PATH="/path/to/your/images"
+# export YMAGO_IMAGE_MODEL="gemini-2.5-flash-image-preview"
+#
+# In a .env file (if using with other tools):
+# GOOGLE_API_KEY=your-actual-api-key
+# YMAGO_OUTPUT_PATH=./my_images
+# YMAGO_IMAGE_MODEL=gemini-2.5-flash-image-preview
+
+# Usage Examples:
+#
+# Basic usage:
+# ymago image generate "A beautiful sunset over mountains"
+#
+# With custom filename:
+# ymago image generate "A cat wearing a hat" --filename "cat_with_hat"
+#
+# With specific parameters:
+# ymago image generate "Abstract art" --quality high --aspect-ratio 16:9 --seed 42
+#
+# View current configuration:
+# ymago config
+#
+# View configuration file location:
+# ymago config --show-path
