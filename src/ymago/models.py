@@ -8,7 +8,7 @@ data structures used throughout the application.
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class GenerationJob(BaseModel):
@@ -55,7 +55,8 @@ class GenerationJob(BaseModel):
         pattern="^(1:1|16:9|9:16|4:3|3:4)$",
     )
 
-    @validator("prompt")
+    @field_validator("prompt")
+    @classmethod
     def validate_prompt(cls, v: str) -> str:
         """Validate and clean the prompt text."""
         cleaned = v.strip()
@@ -63,7 +64,8 @@ class GenerationJob(BaseModel):
             raise ValueError("Prompt cannot be empty or only whitespace")
         return cleaned
 
-    @validator("output_filename")
+    @field_validator("output_filename")
+    @classmethod
     def validate_filename(cls, v: Optional[str]) -> Optional[str]:
         """Validate custom filename if provided."""
         if v is None:
@@ -83,11 +85,7 @@ class GenerationJob(BaseModel):
 
         return cleaned
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_assignment = True
-        extra = "forbid"
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
 class GenerationResult(BaseModel):
@@ -119,7 +117,8 @@ class GenerationResult(BaseModel):
         default=None, description="Time taken to generate the image in seconds", ge=0.0
     )
 
-    @validator("local_path")
+    @field_validator("local_path")
+    @classmethod
     def validate_local_path(cls, v: Path) -> Path:
         """Validate that the local path is absolute."""
         path = Path(v).resolve()
@@ -133,8 +132,4 @@ class GenerationResult(BaseModel):
         """Get a metadata value with optional default."""
         return self.metadata.get(key, default)
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_assignment = True
-        extra = "forbid"
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")

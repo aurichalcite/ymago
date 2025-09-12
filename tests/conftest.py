@@ -7,7 +7,7 @@ used across multiple test modules.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -87,24 +87,24 @@ def mock_genai_client():
     """Provide a mocked Google Generative AI client."""
     mock_client = MagicMock()
     mock_response = MagicMock()
-    
+
     # Set up the response structure
     mock_candidate = MagicMock()
     mock_candidate.finish_reason = "STOP"
-    
+
     mock_content = MagicMock()
     mock_part = MagicMock()
     mock_inline_data = MagicMock()
     mock_inline_data.data = b"fake_image_data"
-    
+
     mock_part.inline_data = mock_inline_data
     mock_content.parts = [mock_part]
     mock_candidate.content = mock_content
-    
+
     mock_response.candidates = [mock_candidate]
-    
+
     mock_client.models.generate_content.return_value = mock_response
-    
+
     return mock_client
 
 

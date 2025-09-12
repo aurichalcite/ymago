@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 import tomli
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Auth(BaseModel):
@@ -19,7 +19,8 @@ class Auth(BaseModel):
         ..., description="Google Generative AI API key for image generation"
     )
 
-    @validator("google_api_key")
+    @field_validator("google_api_key")
+    @classmethod
     def validate_api_key(cls, v: str) -> str:
         """Validate that API key is not empty."""
         if not v.strip():
@@ -40,7 +41,8 @@ class Defaults(BaseModel):
         description="Default directory for saving generated images",
     )
 
-    @validator("output_path")
+    @field_validator("output_path")
+    @classmethod
     def validate_output_path(cls, v: Path) -> Path:
         """Ensure output path is absolute and create if needed."""
         path = Path(v).expanduser().resolve()
@@ -52,12 +54,7 @@ class Settings(BaseModel):
 
     auth: Auth
     defaults: Defaults = Field(default_factory=Defaults)
-
-    class Config:
-        """Pydantic configuration."""
-
-        validate_assignment = True
-        extra = "forbid"
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
 async def load_config() -> Settings:

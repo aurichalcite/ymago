@@ -5,7 +5,6 @@ This module tests the configuration loading, TOML parsing, environment variable
 handling, and Pydantic model validation.
 """
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -45,9 +44,7 @@ class TestDefaultsModel:
 
     def test_defaults_with_valid_values(self):
         """Test Defaults model with valid values."""
-        defaults = Defaults(
-            image_model="test-model", output_path=Path("/test/path")
-        )
+        defaults = Defaults(image_model="test-model", output_path=Path("/test/path"))
         assert defaults.image_model == "test-model"
         assert defaults.output_path == Path("/test/path").resolve()
 
@@ -85,14 +82,13 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_from_current_directory_toml(self, mock_toml_config):
         """Test loading configuration from ./ymago.toml file."""
-        with patch("ymago.config.Path.cwd") as mock_cwd, patch(
-            "ymago.config.Path.home"
-        ) as mock_home, patch(
-            "builtins.open", mock_open()
-        ) as mock_file, patch("ymago.config.tomli.load") as mock_tomli_load, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.cwd") as mock_cwd,
+            patch("ymago.config.Path.home") as mock_home,
+            patch("builtins.open", mock_open()) as mock_file,
+            patch("ymago.config.tomli.load") as mock_tomli_load,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # Mock path creation and existence
             mock_current_path = MagicMock()
             mock_current_path.exists.return_value = True
@@ -113,14 +109,13 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_from_home_directory_toml(self, mock_toml_config):
         """Test loading configuration from ~/.ymago.toml file."""
-        with patch("ymago.config.Path.cwd") as mock_cwd, patch(
-            "ymago.config.Path.home"
-        ) as mock_home, patch(
-            "builtins.open", mock_open()
-        ) as mock_file, patch("ymago.config.tomli.load") as mock_tomli_load, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.cwd") as mock_cwd,
+            patch("ymago.config.Path.home") as mock_home,
+            patch("builtins.open", mock_open()) as mock_file,
+            patch("ymago.config.tomli.load") as mock_tomli_load,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # Mock path creation and existence - only home directory file exists
             mock_current_path = MagicMock()
             mock_current_path.exists.return_value = False
@@ -139,14 +134,13 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_environment_variable_override(self, mock_toml_config):
         """Test environment variables override TOML file values."""
-        with patch("ymago.config.Path.cwd") as mock_cwd, patch(
-            "ymago.config.Path.home"
-        ) as mock_home, patch(
-            "builtins.open", mock_open()
-        ) as mock_file, patch("ymago.config.tomli.load") as mock_tomli_load, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.cwd") as mock_cwd,
+            patch("ymago.config.Path.home") as mock_home,
+            patch("builtins.open", mock_open()) as mock_file,
+            patch("ymago.config.tomli.load") as mock_tomli_load,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # Mock path creation and existence
             mock_current_path = MagicMock()
             mock_current_path.exists.return_value = True
@@ -178,10 +172,10 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_environment_only(self):
         """Test loading configuration from environment variables only."""
-        with patch("ymago.config.Path.exists") as mock_exists, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.exists") as mock_exists,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # No config files exist
             mock_exists.return_value = False
 
@@ -203,10 +197,10 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_missing_configuration_raises_error(self):
         """Test FileNotFoundError when no config file or env vars exist."""
-        with patch("ymago.config.Path.exists") as mock_exists, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.exists") as mock_exists,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # No config files exist and no environment variables
             mock_exists.return_value = False
             mock_getenv.return_value = None
@@ -220,14 +214,13 @@ class TestLoadConfig:
     @pytest.mark.asyncio
     async def test_load_config_invalid_toml_raises_error(self):
         """Test ValueError when TOML file is malformed."""
-        with patch("ymago.config.Path.cwd") as mock_cwd, patch(
-            "ymago.config.Path.home"
-        ) as mock_home, patch(
-            "builtins.open", mock_open()
-        ) as mock_file, patch("ymago.config.tomli.load") as mock_tomli_load, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.cwd") as mock_cwd,
+            patch("ymago.config.Path.home") as mock_home,
+            patch("builtins.open", mock_open()) as mock_file,
+            patch("ymago.config.tomli.load") as mock_tomli_load,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # Mock path creation and existence
             mock_current_path = MagicMock()
             mock_current_path.exists.return_value = True
@@ -247,14 +240,13 @@ class TestLoadConfig:
         """Test ValueError when configuration validation fails."""
         invalid_config = {"auth": {"google_api_key": ""}}  # Empty API key
 
-        with patch("ymago.config.Path.cwd") as mock_cwd, patch(
-            "ymago.config.Path.home"
-        ) as mock_home, patch(
-            "builtins.open", mock_open()
-        ) as mock_file, patch("ymago.config.tomli.load") as mock_tomli_load, patch(
-            "ymago.config.os.getenv"
-        ) as mock_getenv:
-
+        with (
+            patch("ymago.config.Path.cwd") as mock_cwd,
+            patch("ymago.config.Path.home") as mock_home,
+            patch("builtins.open", mock_open()) as mock_file,
+            patch("ymago.config.tomli.load") as mock_tomli_load,
+            patch("ymago.config.os.getenv") as mock_getenv,
+        ):
             # Mock path creation and existence
             mock_current_path = MagicMock()
             mock_current_path.exists.return_value = True

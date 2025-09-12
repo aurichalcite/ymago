@@ -5,10 +5,9 @@ This module tests the process_generation_job function and the complete
 workflow from job input to result output with mocked dependencies.
 """
 
-import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -51,7 +50,7 @@ class TestGenerateFilename:
     def test_generate_filename_sanitizes_special_characters(self):
         """Test filename generation sanitizes special characters."""
         job = GenerationJob(
-            prompt="Test/with\\special:characters*and?quotes\"",
+            prompt='Test/with\\special:characters*and?quotes"',
             output_filename=None,
         )
 
@@ -83,10 +82,11 @@ class TestCreateTempFile:
     @pytest.mark.asyncio
     async def test_create_temp_file_success(self, sample_image_bytes):
         """Test successful temporary file creation."""
-        with patch("ymago.core.generation.tempfile.mkstemp") as mock_mkstemp, patch(
-            "ymago.core.generation.aiofiles.open", create=True
-        ) as mock_open, patch("os.close") as mock_close:
-
+        with (
+            patch("ymago.core.generation.tempfile.mkstemp") as mock_mkstemp,
+            patch("ymago.core.generation.aiofiles.open", create=True) as mock_open,
+            patch("os.close") as mock_close,
+        ):
             # Mock tempfile creation
             mock_fd = 123
             mock_path = "/tmp/temp_image_abc123"
@@ -106,10 +106,11 @@ class TestCreateTempFile:
     @pytest.mark.asyncio
     async def test_create_temp_file_write_error(self, sample_image_bytes):
         """Test temporary file creation handles write errors."""
-        with patch("ymago.core.generation.tempfile.mkstemp") as mock_mkstemp, patch(
-            "ymago.core.generation.aiofiles.open", create=True
-        ) as mock_open, patch("os.close") as mock_close:
-
+        with (
+            patch("ymago.core.generation.tempfile.mkstemp") as mock_mkstemp,
+            patch("ymago.core.generation.aiofiles.open", create=True) as mock_open,
+            patch("os.close") as mock_close,
+        ):
             mock_fd = 123
             mock_path = "/tmp/temp_image_abc123"
             mock_mkstemp.return_value = (mock_fd, mock_path)
@@ -119,7 +120,9 @@ class TestCreateTempFile:
             mock_file.write.side_effect = OSError("Disk full")
             mock_open.return_value.__aenter__.return_value = mock_file
 
-            with pytest.raises(GenerationError, match="Failed to create temporary file"):
+            with pytest.raises(
+                GenerationError, match="Failed to create temporary file"
+            ):
                 await _create_temp_file(sample_image_bytes)
 
             # File descriptor should still be closed
@@ -134,18 +137,14 @@ class TestProcessGenerationJob:
         self, sample_generation_job, sample_config, sample_image_bytes
     ):
         """Test successful generation job processing."""
-        with patch("ymago.core.generation.generate_image") as mock_generate, patch(
-            "ymago.core.generation._create_temp_file"
-        ) as mock_create_temp, patch(
-            "ymago.core.generation.LocalStorageUploader"
-        ) as mock_uploader_class, patch(
-            "ymago.core.generation.aiofiles.os.remove"
-        ) as mock_remove, patch(
-            "ymago.core.generation.aiofiles.os.path.getsize"
-        ) as mock_getsize, patch(
-            "ymago.core.generation.aiofiles.os.path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
             # Mock API call
             mock_generate.return_value = sample_image_bytes
 
@@ -209,7 +208,6 @@ class TestProcessGenerationJob:
     ):
         """Test generation job processing with API error."""
         with patch("ymago.core.generation.generate_image") as mock_generate:
-
             # Mock API error
             from ymago.api import APIError
 
@@ -223,18 +221,14 @@ class TestProcessGenerationJob:
         self, sample_generation_job, sample_config, sample_image_bytes
     ):
         """Test generation job processing with storage error."""
-        with patch("ymago.core.generation.generate_image") as mock_generate, patch(
-            "ymago.core.generation._create_temp_file"
-        ) as mock_create_temp, patch(
-            "ymago.core.generation.LocalStorageUploader"
-        ) as mock_uploader_class, patch(
-            "ymago.core.generation.aiofiles.os.remove"
-        ) as mock_remove, patch(
-            "ymago.core.generation.aiofiles.os.path.getsize"
-        ) as mock_getsize, patch(
-            "ymago.core.generation.aiofiles.os.path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
             # Mock successful API call
             mock_generate.return_value = sample_image_bytes
 
@@ -262,10 +256,10 @@ class TestProcessGenerationJob:
         self, sample_generation_job, sample_config, sample_image_bytes
     ):
         """Test generation job processing with temp file creation error."""
-        with patch("ymago.core.generation.generate_image") as mock_generate, patch(
-            "ymago.core.generation._create_temp_file"
-        ) as mock_create_temp:
-
+        with (
+            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+        ):
             # Mock successful API call
             mock_generate.return_value = sample_image_bytes
 
@@ -280,18 +274,14 @@ class TestProcessGenerationJob:
         self, sample_generation_job, sample_config, sample_image_bytes
     ):
         """Test cleanup occurs even when storage fails."""
-        with patch("ymago.core.generation.generate_image") as mock_generate, patch(
-            "ymago.core.generation._create_temp_file"
-        ) as mock_create_temp, patch(
-            "ymago.core.generation.LocalStorageUploader"
-        ) as mock_uploader_class, patch(
-            "ymago.core.generation.aiofiles.os.remove"
-        ) as mock_remove, patch(
-            "ymago.core.generation.aiofiles.os.path.getsize"
-        ) as mock_getsize, patch(
-            "ymago.core.generation.aiofiles.os.path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
             # Mock successful API call and temp file creation
             mock_generate.return_value = sample_image_bytes
             temp_path = Path("/tmp/temp_image_123.png")
@@ -319,18 +309,14 @@ class TestProcessGenerationJob:
         """Test file size calculation in generation result."""
         large_image_data = b"x" * 5000000  # 5MB of data
 
-        with patch("ymago.core.generation.generate_image") as mock_generate, patch(
-            "ymago.core.generation._create_temp_file"
-        ) as mock_create_temp, patch(
-            "ymago.core.generation.LocalStorageUploader"
-        ) as mock_uploader_class, patch(
-            "ymago.core.generation.aiofiles.os.remove"
-        ) as mock_remove, patch(
-            "ymago.core.generation.aiofiles.os.path.getsize"
-        ) as mock_getsize, patch(
-            "ymago.core.generation.aiofiles.os.path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.core.generation.generate_image") as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
             # Mock API call with large data
             mock_generate.return_value = large_image_data
 

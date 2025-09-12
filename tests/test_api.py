@@ -5,9 +5,8 @@ This module tests the Google Generative AI integration, retry logic,
 error handling, and response processing.
 """
 
-import asyncio
 import base64
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -66,10 +65,10 @@ class TestGenerateImage:
     @pytest.mark.asyncio
     async def test_generate_image_success(self, sample_image_bytes):
         """Test successful image generation."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             # Set up mock client and response
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
@@ -109,10 +108,10 @@ class TestGenerateImage:
         image_data = b"test_image_data"
         base64_data = base64.b64encode(image_data).decode("utf-8")
 
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -133,9 +132,7 @@ class TestGenerateImage:
 
             mock_to_thread.return_value = mock_response
 
-            result = await generate_image(
-                prompt="Test prompt", api_key="test_api_key"
-            )
+            result = await generate_image(prompt="Test prompt", api_key="test_api_key")
 
             assert result == image_data
 
@@ -154,10 +151,10 @@ class TestGenerateImage:
     @pytest.mark.asyncio
     async def test_generate_image_missing_candidates_raises_error(self):
         """Test InvalidResponseError when response has no candidates."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -167,18 +164,16 @@ class TestGenerateImage:
 
             mock_to_thread.return_value = mock_response
 
-            with pytest.raises(
-                APIError, match="API response contains no candidates"
-            ):
+            with pytest.raises(APIError, match="API response contains no candidates"):
                 await generate_image(prompt="Test prompt", api_key="test_api_key")
 
     @pytest.mark.asyncio
     async def test_generate_image_safety_violation_raises_error(self):
         """Test APIError when content is blocked for safety."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -198,10 +193,10 @@ class TestGenerateImage:
     @pytest.mark.asyncio
     async def test_generate_image_missing_content_raises_error(self):
         """Test InvalidResponseError when candidate has no content."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -214,18 +209,16 @@ class TestGenerateImage:
             mock_response.candidates = [mock_candidate]
             mock_to_thread.return_value = mock_response
 
-            with pytest.raises(
-                APIError, match="API response missing content"
-            ):
+            with pytest.raises(APIError, match="API response missing content"):
                 await generate_image(prompt="Test prompt", api_key="test_api_key")
 
     @pytest.mark.asyncio
     async def test_generate_image_no_image_data_raises_error(self):
         """Test InvalidResponseError when no image data is found."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
@@ -241,24 +234,22 @@ class TestGenerateImage:
             mock_response.candidates = [mock_candidate]
             mock_to_thread.return_value = mock_response
 
-            with pytest.raises(
-                APIError, match="No image data found in API response"
-            ):
+            with pytest.raises(APIError, match="No image data found in API response"):
                 await generate_image(prompt="Test prompt", api_key="test_api_key")
 
     @pytest.mark.asyncio
     async def test_generate_image_retry_logic_success(self, sample_image_bytes):
         """Test retry logic succeeds after initial failures."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 
             # First 2 calls fail with network error, 3rd succeeds
             network_error = NetworkError("Connection failed")
-            
+
             # Create successful response
             mock_response = MagicMock()
             mock_candidate = MagicMock()
@@ -276,9 +267,7 @@ class TestGenerateImage:
 
             mock_to_thread.side_effect = [network_error, network_error, mock_response]
 
-            result = await generate_image(
-                prompt="Test prompt", api_key="test_api_key"
-            )
+            result = await generate_image(prompt="Test prompt", api_key="test_api_key")
 
             assert result == sample_image_bytes
             assert mock_to_thread.call_count == 3
@@ -286,10 +275,10 @@ class TestGenerateImage:
     @pytest.mark.asyncio
     async def test_generate_image_invalid_base64_raises_error(self):
         """Test InvalidResponseError for invalid base64 data."""
-        with patch("ymago.api.genai.Client") as mock_client_class, patch(
-            "ymago.api.asyncio.to_thread"
-        ) as mock_to_thread:
-
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
 

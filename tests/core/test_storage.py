@@ -6,7 +6,7 @@ with mocked aiofiles operations.
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -41,12 +41,11 @@ class TestLocalStorageUploader:
         source_file = temp_directory / "source.png"
         destination_key = "images/test_image.png"
 
-        with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists, patch(
-            "ymago.core.storage.aiofiles.os.makedirs"
-        ) as mock_makedirs, patch(
-            "ymago.core.storage.aiofiles.open", create=True
-        ) as mock_open:
-
+        with (
+            patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
+            patch("ymago.core.storage.aiofiles.os.makedirs") as mock_makedirs,
+            patch("ymago.core.storage.aiofiles.open", create=True) as mock_open,
+        ):
             # Mock source file exists
             mock_exists.return_value = True
 
@@ -73,9 +72,7 @@ class TestLocalStorageUploader:
             assert result == str(expected_path.resolve())
 
             # Verify directory creation was called
-            mock_makedirs.assert_called_once_with(
-                expected_path.parent, exist_ok=True
-            )
+            mock_makedirs.assert_called_once_with(expected_path.parent, exist_ok=True)
 
             # Verify file operations
             mock_source_file.read.assert_called()
@@ -93,9 +90,7 @@ class TestLocalStorageUploader:
         with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists:
             mock_exists.return_value = False
 
-            with pytest.raises(
-                FileNotFoundError, match="Source file not found"
-            ):
+            with pytest.raises(FileNotFoundError, match="Source file not found"):
                 await uploader.upload(source_file, destination_key)
 
     @pytest.mark.asyncio
@@ -107,12 +102,11 @@ class TestLocalStorageUploader:
         source_file = temp_directory / "source.png"
         destination_key = "test_image.png"
 
-        with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists, patch(
-            "ymago.core.storage.aiofiles.os.makedirs"
-        ) as mock_makedirs, patch(
-            "ymago.core.storage.aiofiles.open", create=True
-        ) as mock_open:
-
+        with (
+            patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
+            patch("ymago.core.storage.aiofiles.os.makedirs") as mock_makedirs,
+            patch("ymago.core.storage.aiofiles.open", create=True) as mock_open,
+        ):
             mock_exists.return_value = True
 
             # Mock file operations
@@ -176,10 +170,10 @@ class TestLocalStorageUploader:
 
         file_key = "images/test_image.png"
 
-        with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists, patch(
-            "ymago.core.storage.aiofiles.os.remove"
-        ) as mock_remove:
-
+        with (
+            patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
+            patch("ymago.core.storage.aiofiles.os.remove") as mock_remove,
+        ):
             mock_exists.return_value = True
 
             result = await uploader.delete(file_key)
@@ -212,10 +206,10 @@ class TestLocalStorageUploader:
         source_file = temp_directory / "source.png"
         destination_key = "images/test_image.png"
 
-        with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists, patch(
-            "ymago.core.storage.aiofiles.os.makedirs"
-        ) as mock_makedirs:
-
+        with (
+            patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
+            patch("ymago.core.storage.aiofiles.os.makedirs") as mock_makedirs,
+        ):
             mock_exists.return_value = True
             mock_makedirs.side_effect = PermissionError("Permission denied")
 
@@ -236,12 +230,11 @@ class TestLocalStorageUploader:
         chunk2 = b"chunk2" * 1000
         chunk3 = b""  # End of file
 
-        with patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists, patch(
-            "ymago.core.storage.aiofiles.os.makedirs"
-        ) as mock_makedirs, patch(
-            "ymago.core.storage.aiofiles.open", create=True
-        ) as mock_open:
-
+        with (
+            patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
+            patch("ymago.core.storage.aiofiles.os.makedirs") as mock_makedirs,
+            patch("ymago.core.storage.aiofiles.open", create=True) as mock_open,
+        ):
             mock_exists.return_value = True
 
             # Mock file operations with chunked reading

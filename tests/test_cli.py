@@ -5,10 +5,8 @@ This module tests the Typer CLI commands, parameter parsing, output validation,
 and error handling using CliRunner.
 """
 
-from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from ymago import __version__
@@ -85,10 +83,10 @@ class TestConfigCommand:
 
     def test_config_command_with_show_path(self, sample_config):
         """Test config command with --show-path option."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.Path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.Path.exists") as mock_exists,
+        ):
             mock_load_config.return_value = sample_config
             mock_exists.side_effect = lambda path: "ymago.toml" in str(path)
 
@@ -99,10 +97,10 @@ class TestConfigCommand:
 
     def test_config_command_environment_variables_only(self, sample_config):
         """Test config command when using environment variables."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.Path.exists"
-        ) as mock_exists:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.Path.exists") as mock_exists,
+        ):
             mock_load_config.return_value = sample_config
             mock_exists.return_value = False  # No config files exist
 
@@ -131,10 +129,10 @@ class TestImageGenerateCommand:
 
     def test_generate_command_success(self, sample_config, sample_generation_result):
         """Test successful image generation command."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.return_value = sample_generation_result
 
@@ -150,10 +148,10 @@ class TestImageGenerateCommand:
         self, sample_config, sample_generation_result
     ):
         """Test image generation with all command options."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.return_value = sample_generation_result
 
@@ -194,10 +192,10 @@ class TestImageGenerateCommand:
         self, sample_config, sample_generation_result
     ):
         """Test image generation in verbose mode."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.return_value = sample_generation_result
 
@@ -216,25 +214,21 @@ class TestImageGenerateCommand:
         with patch("ymago.cli.load_config") as mock_load_config:
             mock_load_config.side_effect = FileNotFoundError("No config found")
 
-            result = self.runner.invoke(
-                app, ["image", "generate", "A test prompt"]
-            )
+            result = self.runner.invoke(app, ["image", "generate", "A test prompt"])
 
             assert result.exit_code == 1
             assert "Error:" in result.stdout
 
     def test_generate_command_generation_error(self, sample_config):
         """Test image generation with generation error."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.side_effect = GenerationError("API quota exceeded")
 
-            result = self.runner.invoke(
-                app, ["image", "generate", "A test prompt"]
-            )
+            result = self.runner.invoke(app, ["image", "generate", "A test prompt"])
 
             assert result.exit_code == 1
             assert "Error:" in result.stdout
@@ -242,16 +236,14 @@ class TestImageGenerateCommand:
 
     def test_generate_command_storage_error(self, sample_config):
         """Test image generation with storage error."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.side_effect = StorageError("Permission denied")
 
-            result = self.runner.invoke(
-                app, ["image", "generate", "A test prompt"]
-            )
+            result = self.runner.invoke(app, ["image", "generate", "A test prompt"])
 
             assert result.exit_code == 1
             assert "Error:" in result.stdout
@@ -259,26 +251,24 @@ class TestImageGenerateCommand:
 
     def test_generate_command_unexpected_error(self, sample_config):
         """Test image generation with unexpected error."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.side_effect = Exception("Unexpected error")
 
-            result = self.runner.invoke(
-                app, ["image", "generate", "A test prompt"]
-            )
+            result = self.runner.invoke(app, ["image", "generate", "A test prompt"])
 
             assert result.exit_code == 1
             assert "Error:" in result.stdout
 
     def test_generate_command_unexpected_error_verbose(self, sample_config):
         """Test image generation with unexpected error in verbose mode."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.side_effect = Exception("Unexpected error")
 
@@ -317,12 +307,14 @@ class TestParameterValidation:
 
             assert result.exit_code != 0
 
-    def test_generate_command_parameter_types(self, sample_config, sample_generation_result):
+    def test_generate_command_parameter_types(
+        self, sample_config, sample_generation_result
+    ):
         """Test that parameters are correctly typed."""
-        with patch("ymago.cli.load_config") as mock_load_config, patch(
-            "ymago.cli.process_generation_job"
-        ) as mock_process_job:
-
+        with (
+            patch("ymago.cli.load_config") as mock_load_config,
+            patch("ymago.cli.process_generation_job") as mock_process_job,
+        ):
             mock_load_config.return_value = sample_config
             mock_process_job.return_value = sample_generation_result
 
