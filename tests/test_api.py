@@ -17,6 +17,7 @@ from ymago.api import (
     QuotaExceededError,
     _classify_exception,
     generate_image,
+    generate_video,
     validate_api_key,
 )
 
@@ -381,3 +382,64 @@ class TestValidateApiKey:
             result = await validate_api_key("invalid_api_key")
 
             assert result is False
+
+
+class TestGenerateVideo:
+    """Test the generate_video function."""
+
+    @pytest.mark.asyncio
+    async def test_generate_video_success(self):
+        """Test successful video generation."""
+        from unittest.mock import Mock
+
+        # Mock the entire video generation flow
+        video_data = b"fake_video_data"
+
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
+            # Mock the operation that's returned from generate_videos
+            mock_operation = Mock()
+            mock_operation.name = "operations/test-operation-123"
+            mock_operation.done = True
+
+            # Mock the response structure
+            mock_response = Mock()
+            mock_generated_video = Mock()
+            mock_video_file = Mock()
+            mock_generated_video.video = mock_video_file
+            mock_response.generated_videos = [mock_generated_video]
+            mock_operation.response = mock_response
+
+            # Mock client
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+
+            # Mock asyncio.to_thread calls in order:
+            # 1. client.models.generate_videos -> returns operation
+            # 2. client.files.download -> returns video bytes
+            mock_to_thread.side_effect = [mock_operation, video_data]
+
+            result = await generate_video(
+                prompt="A cat playing", api_key="test_key", model="veo-3.0-generate-001"
+            )
+
+            assert result == video_data
+            assert mock_to_thread.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_generate_video_empty_prompt_raises_error(self):
+        """Test that empty prompt raises an error."""
+        with pytest.raises(ValueError, match="Prompt cannot be empty"):
+            await generate_video(
+                prompt="", api_key="test_key", model="veo-3.0-generate-001"
+            )
+
+    @pytest.mark.asyncio
+    async def test_generate_video_empty_api_key_raises_error(self):
+        """Test that empty API key raises an error."""
+        with pytest.raises(ValueError, match="API key cannot be empty"):
+            await generate_video(
+                prompt="A cat playing", api_key="", model="veo-3.0-generate-001"
+            )

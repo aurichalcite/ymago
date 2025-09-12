@@ -8,7 +8,7 @@ error handling and logging.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -36,7 +36,7 @@ class MetadataModel(BaseModel):
     model_name: str = Field(..., description="AI model used for generation")
     seed: int = Field(..., description="Random seed used for generation")
     timestamp_utc: datetime = Field(
-        default_factory=lambda: datetime.utcnow(),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="UTC timestamp when generation was completed",
     )
     source_image_url: Optional[str] = Field(
