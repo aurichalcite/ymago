@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from rich.console import Console
 
 from ymago.config import Auth, Defaults, Settings
 from ymago.models import GenerationJob, GenerationResult
@@ -128,3 +129,62 @@ def mock_env_vars():
         "YMAGO_OUTPUT_PATH": "/env/output/path",
         "YMAGO_IMAGE_MODEL": "env-model",
     }
+
+
+class _NoOpLiveComponent:
+    """A no-op class to replace Rich's live-rendering components during tests."""
+
+    def __init__(self, *args, **kwargs):
+        pass  # Absorb all arguments without action.
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False  # Do not suppress exceptions.
+
+    def update(self, *args, **kwargs):
+        pass  # Absorb all update calls.
+
+    def add_task(self, *args, **kwargs):
+        return 0  # Return a dummy task ID for Progress compatibility
+
+    def start(self, *args, **kwargs):
+        pass  # For Status compatibility
+
+    def stop(self, *args, **kwargs):
+        pass  # For Status compatibility
+
+    def refresh(self, *args, **kwargs):
+        pass  # For Live compatibility
+
+
+@pytest.fixture(autouse=True)
+def mock_rich_live_display(monkeypatch):
+    """
+    Automatically mocks Rich live-rendering components and the console
+    for all tests to ensure speed and deterministic output.
+    """
+    # 1. Patch the live-rendering classes to be complete no-ops
+    import rich.live
+    import rich.progress
+    import rich.status
+
+    monkeypatch.setattr(rich.status, "Status", _NoOpLiveComponent)
+    monkeypatch.setattr(rich.progress, "Progress", _NoOpLiveComponent)
+    monkeypatch.setattr(rich.live, "Live", _NoOpLiveComponent)
+
+    # 2. Create a non-interactive console that still outputs to stdout for CliRunner
+    test_console = Console(
+        force_terminal=False,
+        force_interactive=False,
+        no_color=True,
+        emoji=False,
+        highlight=False,
+        width=120,  # Use a fixed width for consistent output wrapping
+    )
+
+    # 3. Patch the console instance in the CLI module
+    import ymago.cli
+
+    monkeypatch.setattr(ymago.cli, "console", test_console)
