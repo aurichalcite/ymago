@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Execution backend abstraction for ymago package.
 
@@ -8,13 +6,17 @@ implementations for local execution. Future implementations can extend this
 to support distributed execution, cloud functions, etc.
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, List
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List
 
-from ..config import Settings
 from ..models import GenerationJob, GenerationResult
+
+if TYPE_CHECKING:
+    from ..config import Settings
 
 
 class ExecutionBackend(ABC):
@@ -96,7 +98,7 @@ class LocalExecutionBackend(ExecutionBackend):
             raise ValueError("Jobs list cannot be empty")
 
         # Import here to avoid circular imports
-        from ..config import Settings, load_config
+        from ..config import load_config
         from ..core.generation import process_generation_job
 
         # Load configuration once for all jobs
@@ -114,13 +116,20 @@ class LocalExecutionBackend(ExecutionBackend):
 
             # Process results and handle exceptions
             final_results: list[GenerationResult] = []
-            for _i, result in enumerate(results):
-                if isinstance(result, GenerationResult):
-                    final_results.append(result)
-                elif isinstance(result, Exception):
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
                     # For now, re-raise the exception
                     # In a production system, you might want to return error results
                     raise result
+                elif isinstance(result, GenerationResult):
+                    final_results.append(result)
+                else:
+                    # Handle unexpected result types - this should not happen in normal
+                    # operation but provides better error reporting
+                    raise TypeError(
+                        f"Job {i} returned unexpected result type "
+                        f"{type(result).__name__}: {result}"
+                    )
 
             return final_results
 

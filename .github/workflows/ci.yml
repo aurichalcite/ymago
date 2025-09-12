@@ -40,9 +40,9 @@ jobs:
         run: |
           uv run ruff format . --check
 
-#      - name: Type check with mypy
-#        run: |
-#          uv run mypy src
+      - name: Type check with mypy
+        run: |
+          uv run mypy src
 
       - name: Run tests with pytest
         run: |
