@@ -85,7 +85,7 @@ class TestConfigCommand:
         """Test config command with --show-path option."""
         with (
             patch("ymago.cli.load_config", new_callable=AsyncMock) as mock_load_config,
-            patch("pathlib.Path.exists", return_value=True) as mock_exists,
+            patch("pathlib.Path.exists", return_value=True),
         ):
             mock_load_config.return_value = sample_config
 

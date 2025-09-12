@@ -234,7 +234,7 @@ class TestLocalStorageUploader:
 
         with (
             patch("ymago.core.storage.aiofiles.os.path.exists") as mock_exists,
-            patch("ymago.core.storage.aiofiles.os.makedirs") as mock_makedirs,
+            patch("ymago.core.storage.aiofiles.os.makedirs"),
             patch("ymago.core.storage.aiofiles.open", create=True) as mock_open,
         ):
             mock_exists.return_value = True

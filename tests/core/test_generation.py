@@ -325,7 +325,7 @@ class TestProcessGenerationJob:
             ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
-            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.remove"),
             patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
             patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
         ):

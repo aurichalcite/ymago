@@ -85,7 +85,7 @@ class TestLoadConfig:
         with (
             patch("ymago.config.Path.cwd") as mock_cwd,
             patch("ymago.config.Path.home") as mock_home,
-            patch("builtins.open", mock_open()) as mock_file,
+            patch("builtins.open", mock_open()),
             patch("ymago.config.tomli.load") as mock_tomli_load,
             patch("ymago.config.os.getenv") as mock_getenv,
         ):
@@ -112,7 +112,7 @@ class TestLoadConfig:
         with (
             patch("ymago.config.Path.cwd") as mock_cwd,
             patch("ymago.config.Path.home") as mock_home,
-            patch("builtins.open", mock_open()) as mock_file,
+            patch("builtins.open", mock_open()),
             patch("ymago.config.tomli.load") as mock_tomli_load,
             patch("ymago.config.os.getenv") as mock_getenv,
         ):
@@ -137,7 +137,7 @@ class TestLoadConfig:
         with (
             patch("ymago.config.Path.cwd") as mock_cwd,
             patch("ymago.config.Path.home") as mock_home,
-            patch("builtins.open", mock_open()) as mock_file,
+            patch("builtins.open", mock_open()),
             patch("ymago.config.tomli.load") as mock_tomli_load,
             patch("ymago.config.os.getenv") as mock_getenv,
         ):
@@ -207,7 +207,10 @@ class TestLoadConfig:
 
             with pytest.raises(
                 FileNotFoundError,
-                match="No configuration file found.*GOOGLE_API_KEY environment variable is not set",
+                match=(
+                    "No configuration file found.*"
+                    "GOOGLE_API_KEY environment variable is not set"
+                ),
             ):
                 await load_config()
 
@@ -217,7 +220,7 @@ class TestLoadConfig:
         with (
             patch("ymago.config.Path.cwd") as mock_cwd,
             patch("ymago.config.Path.home") as mock_home,
-            patch("builtins.open", mock_open()) as mock_file,
+            patch("builtins.open", mock_open()),
             patch("ymago.config.tomli.load") as mock_tomli_load,
             patch("ymago.config.os.getenv") as mock_getenv,
         ):
@@ -243,7 +246,7 @@ class TestLoadConfig:
         with (
             patch("ymago.config.Path.cwd") as mock_cwd,
             patch("ymago.config.Path.home") as mock_home,
-            patch("builtins.open", mock_open()) as mock_file,
+            patch("builtins.open", mock_open()),
             patch("ymago.config.tomli.load") as mock_tomli_load,
             patch("ymago.config.os.getenv") as mock_getenv,
         ):
