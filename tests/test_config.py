@@ -232,7 +232,9 @@ class TestLoadConfig:
             mock_home_path = MagicMock()
             mock_home_path.exists.return_value = False
             mock_home.return_value.__truediv__.return_value = mock_home_path
-            mock_tomli_load.side_effect = tomli.TOMLDecodeError("Invalid TOML")
+            mock_tomli_load.side_effect = tomli.TOMLDecodeError(
+                msg="Invalid TOML", doc="[invalid", pos=1
+            )
             mock_getenv.return_value = None
 
             with pytest.raises(ValueError, match="Invalid TOML syntax"):
