@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6.6.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Lint with Ruff
+        run: |
+          uv run ruff check .
+
+      - name: Format check with Ruff
+        run: |
+          uv run ruff format . --check
+
+#      - name: Type check with mypy
+#        run: |
+#          uv run mypy src
+
+#      - name: Run tests with pytest
+#        run: |
+#          uv run pytest tests/ -v
+
+#      - name: Upload coverage to Codecov
+#        if: matrix.python-version == '3.12'
+#        uses: codecov/codecov-action@v5.5.1
+#        with:
+#          file: ./coverage.xml
+#          fail_ci_if_error: false
+#          verbose: true
+
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6.6.1
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Run security scan with Bandit
+        continue-on-error: true
+        run: |
+          uv add --dev bandit
+          uv run bandit -r src -f json -o bandit-report.json || true
+
+      - name: Check for dependency vulnerabilities
+        continue-on-error: true
+        run: |
+          uv add --dev safety
+          uv run safety check --json || true
+
+#  docs-build:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v6
+#        with:
+#          python-version: "3.12"
+#
+#      - name: Install uv
+#        uses: astral-sh/setup-uv@v6.6.1
+#
+#      - name: Install dependencies
+#        run: |
+#          uv sync --extra docs
+#
+#      - name: Build documentation
+#        run: |
+#          cd docs
+#          uv run sphinx-build -b html source build || echo "Sphinx not yet configured"
