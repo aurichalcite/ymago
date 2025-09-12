@@ -100,7 +100,7 @@ class TestGenerateImage:
 
             assert result == sample_image_bytes
             mock_client_class.assert_called_once_with(api_key="test_api_key")
-            
+
             # Verify that parameters are passed through to the API call
             mock_to_thread.assert_called_once()
             call_args = mock_to_thread.call_args
