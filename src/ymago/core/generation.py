@@ -14,8 +14,14 @@ from typing import Optional
 import aiofiles
 import aiofiles.os
 
-from ..api import generate_image
+from ..api import generate_image, generate_video
 from ..config import Settings
+from ..core.io_utils import (
+    MetadataModel,
+    download_image,
+    get_metadata_path,
+    write_metadata,
+)
 from ..core.storage import LocalStorageUploader
 from ..models import GenerationJob, GenerationResult
 
@@ -39,11 +45,13 @@ async def process_generation_job(
     Process a single generation job from start to finish.
 
     This function orchestrates the entire generation process:
-    1. Generate image using AI API
-    2. Save to temporary file
-    3. Upload to final storage location
-    4. Clean up temporary files
-    5. Return result with metadata
+    1. Download source image if provided
+    2. Generate media using AI API (image or video)
+    3. Save to temporary file
+    4. Upload to final storage location
+    5. Generate metadata sidecar if enabled
+    6. Clean up temporary files
+    7. Return result with metadata
 
     Args:
         job: The generation job to process
@@ -59,53 +67,101 @@ async def process_generation_job(
     """
     start_time = time.time()
     temp_file_path: Optional[Path] = None
+    source_image_bytes: Optional[bytes] = None
 
     try:
-        # Step 1: Generate image using AI API
-        image_bytes = await generate_image(
-            prompt=job.prompt,
-            api_key=config.auth.google_api_key,
-            model=job.image_model,
-            seed=job.seed,
-            quality=job.quality,
-            aspect_ratio=job.aspect_ratio,
-        )
+        # Step 1: Download source image if provided
+        if job.from_image:
+            source_image_bytes = await download_image(job.from_image)
 
-        # Step 2: Create temporary file for the image
-        temp_file_path = await _create_temp_file(image_bytes)
+        # Step 2: Generate media using AI API
+        if job.media_type == "video":
+            media_bytes = await generate_video(
+                prompt=job.prompt,
+                api_key=config.auth.google_api_key,
+                model=job.video_model,
+                negative_prompt=job.negative_prompt,
+                source_image=source_image_bytes,
+                seed=job.seed,
+                aspect_ratio=job.aspect_ratio,
+            )
+        else:
+            # Image generation
+            media_bytes = await generate_image(
+                prompt=job.prompt,
+                api_key=config.auth.google_api_key,
+                model=job.image_model,
+                seed=job.seed,
+                quality=job.quality,
+                aspect_ratio=job.aspect_ratio,
+                negative_prompt=job.negative_prompt,
+                source_image=source_image_bytes,
+            )
 
-        # Step 3: Determine final filename and storage location
+        # Step 3: Create temporary file for the media
+        temp_file_path = await _create_temp_file(media_bytes, job.file_extension)
+
+        # Step 4: Determine final filename and storage location
         final_filename = _generate_filename(job)
 
-        # Step 4: Set up storage uploader
+        # Step 5: Set up storage uploader
         storage_uploader = LocalStorageUploader(
             base_directory=config.defaults.output_path, create_dirs=True
         )
 
-        # Step 5: Upload to final storage location
+        # Step 6: Upload to final storage location
         try:
             final_path = await storage_uploader.upload(
                 file_path=temp_file_path, destination_key=final_filename
             )
         except Exception as e:
-            raise StorageError(f"Failed to save image to storage: {e}") from e
+            raise StorageError(
+                f"Failed to save {job.media_type} to storage: {e}"
+            ) from e
 
-        # Step 6: Get file size for metadata
+        # Step 7: Get file size for metadata
         file_size = await aiofiles.os.path.getsize(final_path)
 
-        # Step 7: Create and populate result
+        # Step 8: Generate metadata sidecar if enabled
+        if config.defaults.enable_metadata:
+            try:
+                metadata = MetadataModel(
+                    prompt=job.prompt,
+                    negative_prompt=job.negative_prompt,
+                    model_name=job.model_name,
+                    seed=job.seed or -1,  # Use -1 for random seeds
+                    source_image_url=job.from_image,
+                    aspect_ratio=job.aspect_ratio,
+                    generation_parameters={
+                        "media_type": job.media_type,
+                        "quality": job.quality,
+                        "generation_time_seconds": time.time() - start_time,
+                        "file_size_bytes": file_size,
+                    },
+                )
+                metadata_path = get_metadata_path(Path(final_path))
+                await write_metadata(metadata, metadata_path)
+            except Exception as e:
+                # Log warning but don't fail the generation
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to write metadata: {e}")
+
+        # Step 9: Create and populate result
         result = GenerationResult(
             local_path=Path(final_path),
             job=job,
             file_size_bytes=file_size,
             generation_time_seconds=time.time() - start_time,
             metadata={
-                "api_model": job.image_model,
+                "api_model": job.model_name,
                 "prompt_length": len(job.prompt),
-                "image_size_bytes": len(image_bytes),
+                "media_size_bytes": len(media_bytes),
                 "final_filename": final_filename,
                 "storage_backend": "local",
                 "generation_timestamp": time.time(),
+                "media_type": job.media_type,
             },
         )
 
@@ -116,6 +172,10 @@ async def process_generation_job(
             result.add_metadata("quality", job.quality)
         if job.aspect_ratio:
             result.add_metadata("aspect_ratio", job.aspect_ratio)
+        if job.negative_prompt:
+            result.add_metadata("negative_prompt", job.negative_prompt)
+        if job.from_image:
+            result.add_metadata("source_image_url", job.from_image)
 
         return result
 
@@ -136,12 +196,13 @@ async def process_generation_job(
                 pass
 
 
-async def _create_temp_file(image_bytes: bytes) -> Path:
+async def _create_temp_file(media_bytes: bytes, extension: str = ".png") -> Path:
     """
-    Create a temporary file with the image data.
+    Create a temporary file with the media data.
 
     Args:
-        image_bytes: Raw image data
+        media_bytes: Raw media data (image or video)
+        extension: File extension to use (e.g., ".png", ".mp4")
 
     Returns:
         Path: Path to the temporary file
@@ -150,8 +211,8 @@ async def _create_temp_file(image_bytes: bytes) -> Path:
         GenerationError: If temporary file creation fails
     """
     try:
-        # Create temporary file with .png extension
-        temp_fd, temp_path = tempfile.mkstemp(suffix=".png", prefix="ymago_")
+        # Create temporary file with appropriate extension
+        temp_fd, temp_path = tempfile.mkstemp(suffix=extension, prefix="ymago_")
         temp_file_path = Path(temp_path)
 
         # Close the file descriptor since we'll use aiofiles
@@ -159,9 +220,9 @@ async def _create_temp_file(image_bytes: bytes) -> Path:
 
         os.close(temp_fd)
 
-        # Write image data asynchronously
+        # Write media data asynchronously
         async with aiofiles.open(temp_file_path, "wb") as f:
-            await f.write(image_bytes)
+            await f.write(media_bytes)
 
         return temp_file_path
 
@@ -171,7 +232,7 @@ async def _create_temp_file(image_bytes: bytes) -> Path:
 
 def _generate_filename(job: GenerationJob) -> str:
     """
-    Generate a filename for the output image.
+    Generate a filename for the output media.
 
     Args:
         job: The generation job
@@ -195,9 +256,10 @@ def _generate_filename(job: GenerationJob) -> str:
         unique_id = str(uuid.uuid4())[:8]
         base_name = f"{prompt_clean}_{unique_id}"
 
-    # Ensure we have a .png extension
-    if not base_name.lower().endswith(".png"):
-        base_name += ".png"
+    # Ensure we have the correct extension
+    expected_extension = job.file_extension
+    if not base_name.lower().endswith(expected_extension.lower()):
+        base_name += expected_extension
 
     return base_name
 

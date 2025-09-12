@@ -180,7 +180,7 @@ class TestProcessGenerationJob:
             # Verify metadata
             assert result.metadata["api_model"] == sample_generation_job.image_model
             assert result.metadata["prompt_length"] == len(sample_generation_job.prompt)
-            assert result.metadata["image_size_bytes"] == len(sample_image_bytes)
+            assert result.metadata["media_size_bytes"] == len(sample_image_bytes)
             assert "final_filename" in result.metadata
             assert result.metadata["storage_backend"] == "local"
             assert "generation_timestamp" in result.metadata
@@ -193,6 +193,8 @@ class TestProcessGenerationJob:
                 seed=sample_generation_job.seed,
                 quality=sample_generation_job.quality,
                 aspect_ratio=sample_generation_job.aspect_ratio,
+                negative_prompt=sample_generation_job.negative_prompt,
+                source_image=None,  # No source image in this test
             )
 
             # Verify storage operations
@@ -349,4 +351,4 @@ class TestProcessGenerationJob:
 
             # Verify file size matches the generated data
             assert result.file_size_bytes == len(large_image_data)
-            assert result.metadata["image_size_bytes"] == len(large_image_data)
+            assert result.metadata["media_size_bytes"] == len(large_image_data)

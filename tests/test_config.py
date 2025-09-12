@@ -52,7 +52,9 @@ class TestDefaultsModel:
         """Test Defaults model uses correct default values."""
         defaults = Defaults()
         assert defaults.image_model == "gemini-2.5-flash-image-preview"
-        assert defaults.output_path == (Path.cwd() / "generated_images").resolve()
+        assert defaults.video_model == "veo-3.0-generate-001"
+        assert defaults.output_path == (Path.cwd() / "generated_media").resolve()
+        assert defaults.enable_metadata is True
 
     def test_defaults_path_resolution(self):
         """Test Defaults model resolves relative paths to absolute."""
