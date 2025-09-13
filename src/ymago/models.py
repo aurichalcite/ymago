@@ -10,6 +10,8 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .constants import DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL
+
 
 class GenerationJob(BaseModel):
     """
@@ -50,12 +52,12 @@ class GenerationJob(BaseModel):
     )
 
     image_model: str = Field(
-        default="gemini-2.5-flash-image-preview",
+        default=DEFAULT_IMAGE_MODEL,
         description="AI model to use for image generation",
     )
 
     video_model: str = Field(
-        default="veo-3.0-generate-001",
+        default=DEFAULT_VIDEO_MODEL,
         description="AI model to use for video generation",
     )
 

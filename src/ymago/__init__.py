@@ -8,16 +8,23 @@ execution, and comprehensive configuration management.
 """
 
 # Runtime guard to ensure Pydantic v2 is installed
+import sys
+
 import pydantic
 
 # Essential package-level exports for public API
 from .config import Settings, load_config
 from .models import GenerationJob, GenerationResult
 
-assert pydantic.VERSION.startswith("2."), (
-    f"Pydantic v2 or greater is required, but found version {pydantic.VERSION}. "
-    "Please upgrade with: uv add 'pydantic>=2.0,<3.0'"
-)
+# Use runtime check instead of assert to work in optimized mode
+if not pydantic.VERSION.startswith("2."):
+    print(
+        f"Error: Pydantic v2 or greater is required, "
+        f"but found version {pydantic.VERSION}. "
+        "Please upgrade with: uv add 'pydantic>=2.0,<3.0'",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 __version__ = "0.1.0"
 

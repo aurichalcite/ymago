@@ -189,9 +189,9 @@ async def process_generation_job(
         if temp_file_path and await aiofiles.os.path.exists(temp_file_path):
             try:
                 await aiofiles.os.remove(temp_file_path)
-            except Exception:
+            except (OSError, IOError) as e:
                 # Log warning but don't fail the operation
-                pass
+                logger.warning(f"Failed to cleanup temp file {temp_file_path}: {e}")
 
 
 async def _create_temp_file(media_bytes: bytes, extension: str = ".png") -> Path:

@@ -160,11 +160,13 @@ class LocalExecutionBackend(ExecutionBackend):
             try:
                 result = await process_func(job, config)
 
-                # Add execution metadata
-                execution_time = time.time() - start_time
-                result.generation_time_seconds = execution_time
-                result.add_metadata("execution_backend", "local")
-                result.add_metadata("execution_time", execution_time)
+                # Only add metadata if result is a GenerationResult
+                if isinstance(result, GenerationResult):
+                    # Add execution metadata
+                    execution_time = time.time() - start_time
+                    result.generation_time_seconds = execution_time
+                    result.add_metadata("execution_backend", "local")
+                    result.add_metadata("execution_time", execution_time)
 
                 return result
 

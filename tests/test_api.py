@@ -63,7 +63,6 @@ class TestExceptionClassification:
 class TestGenerateImage:
     """Test the generate_image async function."""
 
-
     @pytest.mark.asyncio
     async def test_generate_image_with_base64_data(self):
         """Test image generation with base64 encoded response."""

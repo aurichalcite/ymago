@@ -142,8 +142,15 @@ class LocalStorageUploader(StorageUploader):
             if await aiofiles.os.path.exists(destination_path):
                 try:
                     await aiofiles.os.remove(destination_path)
-                except Exception:
-                    pass  # Best effort cleanup
+                except (OSError, IOError) as cleanup_error:
+                    # Best effort cleanup - log but don't fail
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Failed to cleanup partial file {destination_path}: "
+                        f"{cleanup_error}"
+                    )
             raise e
 
     async def exists(self, destination_key: str) -> bool:
