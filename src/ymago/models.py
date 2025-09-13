@@ -99,7 +99,7 @@ class GenerationJob(BaseModel):
     @field_validator("from_image")
     @classmethod
     def validate_from_image(cls, v: Optional[str]) -> Optional[str]:
-        """Validate source image URL if provided."""
+        """Validate source image if provided (URL or path)."""
         if v is None:
             return v
 
@@ -109,7 +109,23 @@ class GenerationJob(BaseModel):
         if not cleaned:
             return None
 
-        # Basic URL validation
+        # Check if it's a URL
+        is_url = False
+        try:
+            parsed = urlparse(cleaned)
+            if parsed.scheme in ("http", "https") and parsed.netloc:
+                is_url = True
+        except Exception:
+            # Not a valid URL, treat as a path
+            pass
+
+        # If it's not a URL, we assume it's a path.
+        # No further validation here, as path existence is checked in the CLI.
+        if not is_url:
+            # It's a path, so we just return it cleaned.
+            return cleaned
+
+        # If it is a URL, perform basic validation.
         try:
             parsed = urlparse(cleaned)
             if not parsed.scheme or not parsed.netloc:
@@ -117,6 +133,7 @@ class GenerationJob(BaseModel):
             if parsed.scheme not in ("http", "https"):
                 raise ValueError("Source image URL must use http or https")
         except Exception as e:
+            # This will re-raise the validation error for URLs
             raise ValueError(f"Invalid source image URL: {e}") from e
 
         return cleaned

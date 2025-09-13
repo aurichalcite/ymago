@@ -592,6 +592,48 @@ class TestVideoGenerateCommand:
             job_arg = mock_process_job.call_args[0][0]
             assert job_arg.negative_prompt == "people, buildings, text"
 
+    def test_video_generate_from_local_image(
+        self, sample_config, sample_video_result
+    ):
+        """Test video generation from a local image file."""
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+            temp_file.write(b"fake_image_data")
+            image_path = temp_file.name
+
+        try:
+            with (
+                patch(
+                    "ymago.cli.load_config", new_callable=AsyncMock
+                ) as mock_load_config,
+                patch(
+                    "ymago.cli.process_generation_job", new_callable=AsyncMock
+                ) as mock_process_job,
+            ):
+                mock_load_config.return_value = sample_config
+                mock_process_job.return_value = sample_video_result
+
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "video",
+                        "generate",
+                        "Animate this local image",
+                        "--from-image",
+                        image_path,
+                    ],
+                )
+
+                assert result.exit_code == 0
+                mock_process_job.assert_called_once()
+                job_arg = mock_process_job.call_args[0][0]
+                assert job_arg.from_image == image_path
+
+        finally:
+            Path(image_path).unlink()
+
     def test_video_generate_invalid_image_url(self, sample_config):
         """Test video generation with invalid source image URL."""
         with patch("ymago.cli.load_config", new_callable=AsyncMock) as mock_load_config:
@@ -610,7 +652,10 @@ class TestVideoGenerateCommand:
 
             assert result.exit_code == 1
             assert "Error" in result.stdout
+            # The rich console might wrap the text, so we check for the parts
+            # of the message.
             assert "valid HTTP/HTTPS URL" in result.stdout
+            assert "existing local file path" in result.stdout.replace("\n", "")
 
     def test_video_generate_keyboard_interrupt(self, sample_config):
         """Test video generation interrupted by user."""

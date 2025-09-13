@@ -57,6 +57,12 @@ class DownloadError(Exception):
     pass
 
 
+class FileReadError(Exception):
+    """Exception raised when reading a local file fails."""
+
+    pass
+
+
 class MetadataError(Exception):
     """Exception raised when metadata writing fails."""
 
@@ -241,3 +247,23 @@ async def validate_image_data(image_data: bytes) -> None:
     # If no signature matches, log a warning but don't fail
     # Some valid images might not have standard signatures
     logger.warning("Could not detect image format from file signature")
+
+
+async def read_image_from_path(path: Path) -> bytes:
+    """
+    Read image data from a local file path.
+
+    Args:
+        path: The path to the image file.
+
+    Returns:
+        bytes: The image data.
+
+    Raises:
+        FileReadError: If the file cannot be read.
+    """
+    try:
+        async with aiofiles.open(path, "rb") as f:
+            return await f.read()
+    except Exception as e:
+        raise FileReadError(f"Failed to read image from path {path}: {e}") from e
