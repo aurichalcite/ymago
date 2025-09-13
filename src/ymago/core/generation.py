@@ -20,6 +20,7 @@ from ..core.io_utils import (
     MetadataModel,
     download_image,
     get_metadata_path,
+    read_image_from_path,
     write_metadata,
 )
 from ..core.storage import LocalStorageUploader
@@ -70,9 +71,13 @@ async def process_generation_job(
     source_image_bytes: Optional[bytes] = None
 
     try:
-        # Step 1: Download source image if provided
+        # Step 1: Handle source image if provided
         if job.from_image:
-            source_image_bytes = await download_image(job.from_image)
+            if job.from_image.lower().startswith(("http://", "https://")):
+                source_image_bytes = await download_image(job.from_image)
+            else:
+                image_path = Path(job.from_image).expanduser()
+                source_image_bytes = await read_image_from_path(image_path)
 
         # Step 2: Generate media using AI API
         if job.media_type == "video":
@@ -82,8 +87,6 @@ async def process_generation_job(
                 model=job.video_model,
                 negative_prompt=job.negative_prompt,
                 source_image=source_image_bytes,
-                seed=job.seed,
-                aspect_ratio=job.aspect_ratio,
             )
         else:
             # Image generation
@@ -191,9 +194,9 @@ async def process_generation_job(
         if temp_file_path and await aiofiles.os.path.exists(temp_file_path):
             try:
                 await aiofiles.os.remove(temp_file_path)
-            except Exception:
+            except (OSError, IOError) as e:
                 # Log warning but don't fail the operation
-                pass
+                logger.warning(f"Failed to cleanup temp file {temp_file_path}: {e}")
 
 
 async def _create_temp_file(media_bytes: bytes, extension: str = ".png") -> Path:

@@ -8,7 +8,7 @@ error handling and logging.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -36,7 +36,7 @@ class MetadataModel(BaseModel):
     model_name: str = Field(..., description="AI model used for generation")
     seed: int = Field(..., description="Random seed used for generation")
     timestamp_utc: datetime = Field(
-        default_factory=lambda: datetime.utcnow(),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="UTC timestamp when generation was completed",
     )
     source_image_url: Optional[str] = Field(
@@ -53,6 +53,12 @@ class MetadataModel(BaseModel):
 
 class DownloadError(Exception):
     """Exception raised when image download fails."""
+
+    pass
+
+
+class FileReadError(Exception):
+    """Exception raised when reading a local file fails."""
 
     pass
 
@@ -241,3 +247,23 @@ async def validate_image_data(image_data: bytes) -> None:
     # If no signature matches, log a warning but don't fail
     # Some valid images might not have standard signatures
     logger.warning("Could not detect image format from file signature")
+
+
+async def read_image_from_path(path: Path) -> bytes:
+    """
+    Read image data from a local file path.
+
+    Args:
+        path: The path to the image file.
+
+    Returns:
+        bytes: The image data.
+
+    Raises:
+        FileReadError: If the file cannot be read.
+    """
+    try:
+        async with aiofiles.open(path, "rb") as f:
+            return await f.read()
+    except Exception as e:
+        raise FileReadError(f"Failed to read image from path {path}: {e}") from e

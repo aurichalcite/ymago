@@ -17,6 +17,7 @@ from ymago.api import (
     QuotaExceededError,
     _classify_exception,
     generate_image,
+    generate_video,
     validate_api_key,
 )
 
@@ -61,50 +62,6 @@ class TestExceptionClassification:
 
 class TestGenerateImage:
     """Test the generate_image async function."""
-
-    @pytest.mark.asyncio
-    async def test_generate_image_success(self, sample_image_bytes):
-        """Test successful image generation."""
-        with (
-            patch("ymago.api.genai.Client") as mock_client_class,
-            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
-        ):
-            # Set up mock client and response
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
-
-            # Create mock response structure
-            mock_response = MagicMock()
-            mock_candidate = MagicMock()
-            mock_candidate.finish_reason = "STOP"
-
-            mock_content = MagicMock()
-            mock_part = MagicMock()
-            mock_inline_data = MagicMock()
-            mock_inline_data.data = sample_image_bytes
-
-            mock_part.inline_data = mock_inline_data
-            mock_content.parts = [mock_part]
-            mock_candidate.content = mock_content
-            mock_response.candidates = [mock_candidate]
-
-            mock_to_thread.return_value = mock_response
-
-            # Test the function
-            result = await generate_image(
-                prompt="Test prompt",
-                api_key="test_api_key",
-                model="test-model",
-                seed=42,
-            )
-
-            assert result == sample_image_bytes
-            mock_client_class.assert_called_once_with(api_key="test_api_key")
-
-            # Verify that parameters are passed through to the API call
-            mock_to_thread.assert_called_once()
-            call_args = mock_to_thread.call_args
-            assert call_args[1]["seed"] == 42  # Check that seed parameter was passed
 
     @pytest.mark.asyncio
     async def test_generate_image_with_base64_data(self):
@@ -310,10 +267,13 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_parameters_passed_through(self, sample_image_bytes):
-        """Test that quality, seed, and aspect_ratio parameters are passed to API."""
+        """Test that generation parameters are passed correctly via GenerationConfig."""
         with (
             patch("ymago.api.genai.Client") as mock_client_class,
             patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+            patch(
+                "ymago.api.types.GenerateContentConfig"
+            ) as mock_generate_content_config_class,
         ):
             # Set up mock client and response
             mock_client = MagicMock()
@@ -323,18 +283,21 @@ class TestGenerateImage:
             mock_response = MagicMock()
             mock_candidate = MagicMock()
             mock_candidate.finish_reason = "STOP"
-
             mock_content = MagicMock()
             mock_part = MagicMock()
             mock_inline_data = MagicMock()
             mock_inline_data.data = sample_image_bytes
-
             mock_part.inline_data = mock_inline_data
             mock_content.parts = [mock_part]
             mock_candidate.content = mock_content
             mock_response.candidates = [mock_candidate]
-
             mock_to_thread.return_value = mock_response
+
+            # Mock config instances
+            mock_generate_content_config = MagicMock()
+            mock_generate_content_config_class.return_value = (
+                mock_generate_content_config
+            )
 
             # Test the function with multiple parameters
             await generate_image(
@@ -346,12 +309,14 @@ class TestGenerateImage:
                 aspect_ratio="16:9",
             )
 
-            # Verify that all parameters are passed through to the API call
+            # Verify that GenerateContentConfig is created with the seed
+            mock_generate_content_config_class.assert_called_once_with(seed=42)
+
+            # Verify that generate_content is called with the GenerateContentConfig
             mock_to_thread.assert_called_once()
-            call_args = mock_to_thread.call_args
-            assert call_args[1]["seed"] == 42
-            assert call_args[1]["quality"] == "high"
-            assert call_args[1]["aspect_ratio"] == "16:9"
+            _, call_kwargs = mock_to_thread.call_args
+            assert "config" in call_kwargs
+            assert call_kwargs["config"] == mock_generate_content_config
 
 
 class TestValidateApiKey:
@@ -381,3 +346,64 @@ class TestValidateApiKey:
             result = await validate_api_key("invalid_api_key")
 
             assert result is False
+
+
+class TestGenerateVideo:
+    """Test the generate_video function."""
+
+    @pytest.mark.asyncio
+    async def test_generate_video_success(self):
+        """Test successful video generation."""
+        from unittest.mock import Mock
+
+        # Mock the entire video generation flow
+        video_data = b"fake_video_data"
+
+        with (
+            patch("ymago.api.genai.Client") as mock_client_class,
+            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+        ):
+            # Mock the operation that's returned from generate_videos
+            mock_operation = Mock()
+            mock_operation.name = "operations/test-operation-123"
+            mock_operation.done = True
+
+            # Mock the response structure
+            mock_response = Mock()
+            mock_generated_video = Mock()
+            mock_video_file = Mock()
+            mock_generated_video.video = mock_video_file
+            mock_response.generated_videos = [mock_generated_video]
+            mock_operation.response = mock_response
+
+            # Mock client
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+
+            # Mock asyncio.to_thread calls in order:
+            # 1. client.models.generate_videos -> returns operation
+            # 2. client.files.download -> returns video bytes
+            mock_to_thread.side_effect = [mock_operation, video_data]
+
+            result = await generate_video(
+                prompt="A cat playing", api_key="test_key", model="veo-3.0-generate-001"
+            )
+
+            assert result == video_data
+            assert mock_to_thread.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_generate_video_empty_prompt_raises_error(self):
+        """Test that empty prompt raises an error."""
+        with pytest.raises(ValueError, match="Prompt cannot be empty"):
+            await generate_video(
+                prompt="", api_key="test_key", model="veo-3.0-generate-001"
+            )
+
+    @pytest.mark.asyncio
+    async def test_generate_video_empty_api_key_raises_error(self):
+        """Test that empty API key raises an error."""
+        with pytest.raises(ValueError, match="API key cannot be empty"):
+            await generate_video(
+                prompt="A cat playing", api_key="", model="veo-3.0-generate-001"
+            )

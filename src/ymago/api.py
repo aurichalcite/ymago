@@ -12,12 +12,23 @@ import time
 from typing import Any, Optional
 
 import google.genai as genai
+from google.genai import types
 from tenacity import (
     before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
+)
+
+from .constants import (
+    DEFAULT_IMAGE_MODEL,
+    DEFAULT_VIDEO_MODEL,
+    MAX_RETRY_ATTEMPTS,
+    RETRY_MAX_WAIT,
+    RETRY_MULTIPLIER,
+    VIDEO_MAX_WAIT_TIME,
+    VIDEO_POLL_INTERVAL,
 )
 
 # Configure logging for this module
@@ -78,8 +89,8 @@ def _classify_exception(exc: Exception) -> Exception:
 
 
 @retry(
-    wait=wait_random_exponential(multiplier=1, max=60),
-    stop=stop_after_attempt(5),
+    wait=wait_random_exponential(multiplier=RETRY_MULTIPLIER, max=RETRY_MAX_WAIT),
+    stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
     retry=retry_if_exception_type((NetworkError, QuotaExceededError)),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
@@ -87,7 +98,7 @@ def _classify_exception(exc: Exception) -> Exception:
 async def generate_image(
     prompt: str,
     api_key: str,
-    model: str = "gemini-2.5-flash-image-preview",
+    model: str = DEFAULT_IMAGE_MODEL,
     negative_prompt: Optional[str] = None,
     source_image: Optional[bytes] = None,
     **params: Any,
@@ -142,17 +153,18 @@ async def generate_image(
 
         # Add source image if provided (for image-to-image generation)
         if source_image:
-            from google.genai import types
-
             image_obj = types.Image(image_bytes=source_image, mime_type="image/png")
             contents.append(image_obj)
+
+        # Prepare generation config
+        config = types.GenerateContentConfig(seed=params.get("seed"))
 
         # Make the API call with additional parameters
         response = await asyncio.to_thread(
             client.models.generate_content,
             model=model,
             contents=contents,
-            **params,
+            config=config,
         )
 
         # Validate response structure
@@ -218,8 +230,8 @@ async def generate_image(
 
 
 @retry(
-    wait=wait_random_exponential(multiplier=1, max=60),
-    stop=stop_after_attempt(5),
+    wait=wait_random_exponential(multiplier=RETRY_MULTIPLIER, max=RETRY_MAX_WAIT),
+    stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
     retry=retry_if_exception_type((NetworkError, QuotaExceededError)),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
@@ -227,10 +239,9 @@ async def generate_image(
 async def generate_video(
     prompt: str,
     api_key: str,
-    model: str = "veo-3.0-generate-001",
+    model: str = DEFAULT_VIDEO_MODEL,
     negative_prompt: Optional[str] = None,
     source_image: Optional[bytes] = None,
-    **params: Any,
 ) -> bytes:
     """
     Generate a video from a text prompt using Google's Veo model.
@@ -295,8 +306,8 @@ async def generate_video(
         # Poll for completion
         logger.info(f"Video generation started, operation: {operation.name}")
 
-        max_wait_time = 600  # 10 minutes maximum wait
-        poll_interval = 10  # Poll every 10 seconds
+        max_wait_time = VIDEO_MAX_WAIT_TIME
+        poll_interval = VIDEO_POLL_INTERVAL
         start_time = time.time()
 
         while not operation.done:
@@ -357,9 +368,10 @@ async def validate_api_key(api_key: str) -> bool:
     """
     try:
         # Try a simple generation with a minimal prompt
-        await generate_image(
-            prompt="test", api_key=api_key, model="gemini-2.5-flash-image-preview"
-        )
+        await generate_image(prompt="test", api_key=api_key, model=DEFAULT_IMAGE_MODEL)
         return True
-    except Exception:
+    except (QuotaExceededError, APIError, ValueError):
+        return False
+    except Exception as e:
+        logger.warning(f"Unexpected error validating API key: {e}")
         return False

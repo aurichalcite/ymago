@@ -315,6 +315,50 @@ class TestProcessGenerationJob:
             mock_remove.assert_called_once_with(temp_path)
 
     @pytest.mark.asyncio
+    async def test_process_generation_job_from_local_file(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job processing with a local file as source image."""
+        local_image_path = "/path/to/local/image.png"
+        sample_generation_job.from_image = local_image_path
+
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                "ymago.core.generation.read_image_from_path", new_callable=AsyncMock
+            ) as mock_read_image,
+            patch(
+                "ymago.core.generation.download_image", new_callable=AsyncMock
+            ) as mock_download_image,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch("ymago.core.generation.aiofiles.os.remove"),
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists"),
+        ):
+            mock_generate.return_value = sample_image_bytes
+            mock_read_image.return_value = b"local_image_bytes"
+            mock_create_temp.return_value = Path("/tmp/temp.png")
+            mock_uploader = AsyncMock()
+            mock_uploader.upload.return_value = "/output/test.png"
+            mock_uploader_class.return_value = mock_uploader
+            mock_getsize.return_value = len(sample_image_bytes)
+
+            await process_generation_job(sample_generation_job, sample_config)
+
+            mock_read_image.assert_called_once()
+            # Get the path argument from the call
+            call_path = mock_read_image.call_args[0][0]
+            assert str(call_path) == local_image_path
+
+            mock_download_image.assert_not_called()
+            mock_generate.assert_called_once()
+            # Check that the local image bytes were passed to the generator
+            assert mock_generate.call_args[1]["source_image"] == b"local_image_bytes"
+
+    @pytest.mark.asyncio
     async def test_process_generation_job_file_size_calculation(
         self, sample_generation_job, sample_config
     ):
