@@ -9,6 +9,25 @@ version = "0.1.0"
 description = "An advanced, asynchronous command-line toolkit and Python library for generative AI media."
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Andrej Mäsiar", email = "author@example.com"}]
+keywords = ["ai", "generative", "image", "video", "gemini", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Graphics",
+]
+[project.urls]
+Homepage = "https://github.com/aurichalcite/ymago"
+Documentation = "https://github.com/aurichalcite/ymago#readme"
+Repository = "https://github.com/aurichalcite/ymago.git"
+Issues = "https://github.com/aurichalcite/ymago/issues"
 dependencies = [
     "aiofiles>=24.1.0",
     "aiohttp>=3.12.15",
