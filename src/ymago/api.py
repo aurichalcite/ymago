@@ -147,9 +147,7 @@ async def generate_image(
             contents.append(image_obj)
 
         # Prepare generation config
-        config = types.GenerationConfig(
-            seed=params.get("seed"),
-        )
+        config = types.GenerateContentConfig(seed=params.get("seed"))
 
         # Make the API call with additional parameters
         response = await asyncio.to_thread(

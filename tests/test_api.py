@@ -272,7 +272,9 @@ class TestGenerateImage:
         with (
             patch("ymago.api.genai.Client") as mock_client_class,
             patch("ymago.api.asyncio.to_thread") as mock_to_thread,
-            patch("ymago.api.types.GenerationConfig") as mock_gen_config_class,
+            patch(
+                "ymago.api.types.GenerateContentConfig"
+            ) as mock_generate_content_config_class,
         ):
             # Set up mock client and response
             mock_client = MagicMock()
@@ -282,20 +284,21 @@ class TestGenerateImage:
             mock_response = MagicMock()
             mock_candidate = MagicMock()
             mock_candidate.finish_reason = "STOP"
-
             mock_content = MagicMock()
             mock_part = MagicMock()
             mock_inline_data = MagicMock()
             mock_inline_data.data = sample_image_bytes
-
             mock_part.inline_data = mock_inline_data
             mock_content.parts = [mock_part]
             mock_candidate.content = mock_content
             mock_response.candidates = [mock_candidate]
-
             mock_to_thread.return_value = mock_response
-            mock_gen_config_instance = MagicMock()
-            mock_gen_config_class.return_value = mock_gen_config_instance
+
+            # Mock config instances
+            mock_generate_content_config = MagicMock()
+            mock_generate_content_config_class.return_value = (
+                mock_generate_content_config
+            )
 
             # Test the function with multiple parameters
             await generate_image(
@@ -307,14 +310,14 @@ class TestGenerateImage:
                 aspect_ratio="16:9",
             )
 
-            # Verify that GenerationConfig is created with the seed
-            mock_gen_config_class.assert_called_once_with(seed=42)
+            # Verify that GenerateContentConfig is created with the seed
+            mock_generate_content_config_class.assert_called_once_with(seed=42)
 
-            # Verify that generate_content is called with the GenerationConfig instance
+            # Verify that generate_content is called with the GenerateContentConfig
             mock_to_thread.assert_called_once()
-            call_args, call_kwargs = mock_to_thread.call_args
+            _, call_kwargs = mock_to_thread.call_args
             assert "config" in call_kwargs
-            assert call_kwargs["config"] == mock_gen_config_instance
+            assert call_kwargs["config"] == mock_generate_content_config
 
 
 class TestValidateApiKey:
