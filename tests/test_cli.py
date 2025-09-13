@@ -420,7 +420,9 @@ class TestVideoGenerateCommand:
         assert "prompt" in result.stdout
         assert "--filename" in result.stdout
         assert "--from-image" in result.stdout
-        assert "--duration" in result.stdout or True  # May not be implemented yet
+        if "--duration" not in result.stdout:
+            pytest.skip("The --duration parameter is not implemented yet.")
+        assert "--duration" in result.stdout
 
     def test_video_generate_basic_success(self, sample_config, sample_video_result):
         """Test basic video generation command."""
