@@ -12,6 +12,7 @@ import time
 from typing import Any, Optional
 
 import google.genai as genai
+from google.genai import types
 from tenacity import (
     before_sleep_log,
     retry,
@@ -142,17 +143,20 @@ async def generate_image(
 
         # Add source image if provided (for image-to-image generation)
         if source_image:
-            from google.genai import types
-
             image_obj = types.Image(image_bytes=source_image, mime_type="image/png")
             contents.append(image_obj)
+
+        # Prepare generation config
+        generation_config = types.GenerationConfig(
+            seed=params.get("seed"),
+        )
 
         # Make the API call with additional parameters
         response = await asyncio.to_thread(
             client.models.generate_content,
             model=model,
             contents=contents,
-            **params,
+            generation_config=generation_config,
         )
 
         # Validate response structure
@@ -230,7 +234,6 @@ async def generate_video(
     model: str = "veo-3.0-generate-001",
     negative_prompt: Optional[str] = None,
     source_image: Optional[bytes] = None,
-    **params: Any,
 ) -> bytes:
     """
     Generate a video from a text prompt using Google's Veo model.

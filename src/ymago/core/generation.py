@@ -82,8 +82,6 @@ async def process_generation_job(
                 model=job.video_model,
                 negative_prompt=job.negative_prompt,
                 source_image=source_image_bytes,
-                seed=job.seed,
-                aspect_ratio=job.aspect_ratio,
             )
         else:
             # Image generation
