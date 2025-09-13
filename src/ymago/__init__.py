@@ -12,6 +12,8 @@ import sys
 
 import pydantic
 
+from ._version import __version__
+
 # Essential package-level exports for public API
 from .config import Settings, load_config
 from .models import GenerationJob, GenerationResult
@@ -28,6 +30,7 @@ if not pydantic.VERSION.startswith("2."):
 
 
 __all__ = [
+    "__version__",
     "Settings",
     "load_config",
     "GenerationJob",
