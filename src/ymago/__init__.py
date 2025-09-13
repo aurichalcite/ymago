@@ -26,10 +26,8 @@ if not pydantic.VERSION.startswith("2."):
     print(error_msg, file=sys.stderr)
     sys.exit(1)
 
-__version__ = "0.1.0"
 
 __all__ = [
-    "__version__",
     "Settings",
     "load_config",
     "GenerationJob",

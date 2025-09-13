@@ -1,27 +1,36 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+tag-pattern = "^v(?P<version>\\d+\\.\\d+\\.\\d+)$"
+
+version-file = "src/ymago/_version.py"
 
 [project]
 name = "ymago"
-version = "0.1.0"
+dynamic = ["version"]
 description = "An advanced, asynchronous command-line toolkit and Python library for generative AI media."
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
-license = {text = "MIT"}
-authors = [{name = "Andrej Mäsiar", email = "author@example.com"}]
+license = {file = "LICENSE"}
+authors = [{name = "Andrej Mäsiar", email = "86407432+aurichalcite@users.noreply.github.com"}]
 keywords = ["ai", "generative", "image", "video", "gemini", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Multimedia :: Graphics",
+    "Typing :: Typed",
 ]
+
 dependencies = [
     "aiofiles>=24.1.0",
     "aiohttp>=3.12.15",
@@ -44,6 +53,8 @@ dev = [
     "aresponses>=3.0.0",
     "mypy>=1.17.1",
     "ruff>=0.13.0",
+    "types-aiofiles>=24.1.0.20250822",
+    "bandit>=1.8.6",
 ]
 docs = [
     "sphinx>=8.0.0",
@@ -75,8 +86,6 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/ymago"]
 
-
-
 [project.scripts]
 ymago = "ymago.cli:app"
 
@@ -94,8 +103,3 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["google.*", "tenacity.*"]
 ignore_missing_imports = true
-
-[dependency-groups]
-dev = [
-    "bandit>=1.8.6",
-]

@@ -1615,7 +1615,6 @@ wheels = [
 
 [[package]]
 name = "ymago"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1631,8 +1630,10 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "aresponses" },
+    { name = "bandit" },
     { name = "mypy" },
     { name = "ruff" },
+    { name = "types-aiofiles" },
 ]
 docs = [
     { name = "myst-parser" },
@@ -1651,16 +1652,12 @@ test = [
     { name = "pytest-xdist" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "bandit" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "aiohttp", specifier = ">=3.12.15" },
     { name = "aresponses", marker = "extra == 'dev'", specifier = ">=3.0.0" },
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "google-genai", specifier = ">=1.36.0" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.100.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
@@ -1681,8 +1678,6 @@ requires-dist = [
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "typer", specifier = ">=0.17.4" },
     { name = "types-aiofiles", specifier = ">=24.1.0.20250822" },
+    { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=24.1.0.20250822" },
 ]
 provides-extras = ["dev", "docs", "test"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "bandit", specifier = ">=1.8.6" }]
