@@ -356,9 +356,7 @@ class TestProcessGenerationJob:
             mock_download_image.assert_not_called()
             mock_generate.assert_called_once()
             # Check that the local image bytes were passed to the generator
-            assert (
-                mock_generate.call_args[1]["source_image"] == b"local_image_bytes"
-            )
+            assert mock_generate.call_args[1]["source_image"] == b"local_image_bytes"
 
     @pytest.mark.asyncio
     async def test_process_generation_job_file_size_calculation(

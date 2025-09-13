@@ -592,9 +592,7 @@ class TestVideoGenerateCommand:
             job_arg = mock_process_job.call_args[0][0]
             assert job_arg.negative_prompt == "people, buildings, text"
 
-    def test_video_generate_from_local_image(
-        self, sample_config, sample_video_result
-    ):
+    def test_video_generate_from_local_image(self, sample_config, sample_video_result):
         """Test video generation from a local image file."""
         import tempfile
         from pathlib import Path

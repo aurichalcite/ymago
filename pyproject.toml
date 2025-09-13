@@ -86,7 +86,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"] # flake8, pyflakes, bugbear, isort
-ignore = ["ANN101", "ANN102"]
 
 [tool.mypy]
 python_version = "3.11"
