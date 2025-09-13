@@ -1,3 +1,4 @@
+[![CI](https://github.com/aurichalcite/ymago/actions/workflows/ci.yml/badge.svg)](https://github.com/aurichalcite/ymago/actions/workflows/ci.yml)
 # ymago: Advanced Generative AI Media Toolkit
 
 
