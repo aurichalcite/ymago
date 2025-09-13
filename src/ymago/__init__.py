@@ -19,7 +19,8 @@ from .models import GenerationJob, GenerationResult
 # Use runtime check instead of assert to work in optimized mode
 if not pydantic.VERSION.startswith("2."):
     error_msg = (
-        f"Error: Pydantic v2 or greater is required, but found version {pydantic.VERSION}. "
+        f"Error: Pydantic v2 or greater is required,"
+        f"but found version {pydantic.VERSION}. "
         "Please upgrade with: uv add 'pydantic>=2.0,<3.0'"
     )
     print(error_msg, file=sys.stderr)
