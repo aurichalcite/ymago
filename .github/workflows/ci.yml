@@ -56,6 +56,12 @@ jobs:
           uv run pytest tests/ -v
 
       - name: Generate coverage report
+        env:
+          NO_COLOR: "1"
+          CLICOLOR: "0"
+          PY_COLORS: "0"
+          TERM: "dumb"
+          RICH_COLOR_SYSTEM: "none"
         run: |
           uv run coverage run -m pytest tests/
           uv run coverage xml

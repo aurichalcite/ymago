@@ -14,9 +14,11 @@ import pytest
 
 from ymago.core.io_utils import (
     DownloadError,
+    FileReadError,
     MetadataError,
     MetadataModel,
     download_image,
+    read_image_from_path,
     write_metadata,
 )
 
@@ -208,3 +210,27 @@ class TestWriteMetadata:
                 prompt="Test prompt",
                 # Missing required model_name and seed
             )
+
+
+class TestReadImageFromPath:
+    """Test the read_image_from_path function."""
+
+    @pytest.mark.asyncio
+    async def test_read_image_from_path_success(self):
+        """Test successful image reading from a path."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+            temp_file.write(b"fake_image_data")
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = await read_image_from_path(temp_path)
+            assert result == b"fake_image_data"
+        finally:
+            temp_path.unlink()
+
+    @pytest.mark.asyncio
+    async def test_read_image_from_path_not_found(self):
+        """Test reading a non-existent image file."""
+        non_existent_path = Path("non_existent_file.png")
+        with pytest.raises(FileReadError):
+            await read_image_from_path(non_existent_path)

@@ -64,6 +64,13 @@ def _validate_url(url: str) -> bool:
     return bool(re.match(url_pattern, url))
 
 
+def _validate_url_or_path(value: str) -> bool:
+    """Validate that value is a valid URL or an existing file path."""
+    if _validate_url(value):
+        return True
+    return Path(value).expanduser().is_file()
+
+
 def _validate_seed(seed: int) -> bool:
     """Validate seed value."""
     return seed == -1 or seed >= 0
@@ -226,7 +233,7 @@ def generate_video_command(
     from_image: Optional[str] = typer.Option(
         None,
         "--from-image",
-        help="URL of source image for image-to-video generation",
+        help="URL or local path of source image for image-to-video generation",
     ),
     model: Optional[str] = typer.Option(
         None, "--model", "-m", help="AI model to use for video generation"
@@ -266,9 +273,10 @@ def generate_video_command(
                 )
                 sys.exit(1)
 
-            if from_image and not _validate_url(from_image):
+            if from_image and not _validate_url_or_path(from_image):
                 console.print(
-                    "[red]Error: Source image must be a valid HTTP/HTTPS URL[/red]"
+                    "[red]Error: Source image must be a valid "
+                    "HTTP/HTTPS URL or an existing local file path[/red]"
                 )
                 sys.exit(1)
 

@@ -20,6 +20,7 @@ from ..core.io_utils import (
     MetadataModel,
     download_image,
     get_metadata_path,
+    read_image_from_path,
     write_metadata,
 )
 from ..core.storage import LocalStorageUploader
@@ -70,9 +71,13 @@ async def process_generation_job(
     source_image_bytes: Optional[bytes] = None
 
     try:
-        # Step 1: Download source image if provided
+        # Step 1: Handle source image if provided
         if job.from_image:
-            source_image_bytes = await download_image(job.from_image)
+            if job.from_image.lower().startswith(("http://", "https://")):
+                source_image_bytes = await download_image(job.from_image)
+            else:
+                image_path = Path(job.from_image).expanduser()
+                source_image_bytes = await read_image_from_path(image_path)
 
         # Step 2: Generate media using AI API
         if job.media_type == "video":
