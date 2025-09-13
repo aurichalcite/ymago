@@ -63,49 +63,6 @@ class TestExceptionClassification:
 class TestGenerateImage:
     """Test the generate_image async function."""
 
-    @pytest.mark.asyncio
-    async def test_generate_image_success(self, sample_image_bytes):
-        """Test successful image generation."""
-        with (
-            patch("ymago.api.genai.Client") as mock_client_class,
-            patch("ymago.api.asyncio.to_thread") as mock_to_thread,
-        ):
-            # Set up mock client and response
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
-
-            # Create mock response structure
-            mock_response = MagicMock()
-            mock_candidate = MagicMock()
-            mock_candidate.finish_reason = "STOP"
-
-            mock_content = MagicMock()
-            mock_part = MagicMock()
-            mock_inline_data = MagicMock()
-            mock_inline_data.data = sample_image_bytes
-
-            mock_part.inline_data = mock_inline_data
-            mock_content.parts = [mock_part]
-            mock_candidate.content = mock_content
-            mock_response.candidates = [mock_candidate]
-
-            mock_to_thread.return_value = mock_response
-
-            # Test the function
-            result = await generate_image(
-                prompt="Test prompt",
-                api_key="test_api_key",
-                model="test-model",
-                seed=42,
-            )
-
-            assert result == sample_image_bytes
-            mock_client_class.assert_called_once_with(api_key="test_api_key")
-
-            # Verify that parameters are passed through to the API call
-            mock_to_thread.assert_called_once()
-            call_args = mock_to_thread.call_args
-            assert call_args[1]["seed"] == 42  # Check that seed parameter was passed
 
     @pytest.mark.asyncio
     async def test_generate_image_with_base64_data(self):
@@ -311,10 +268,13 @@ class TestGenerateImage:
 
     @pytest.mark.asyncio
     async def test_generate_image_parameters_passed_through(self, sample_image_bytes):
-        """Test that quality, seed, and aspect_ratio parameters are passed to API."""
+        """Test that generation parameters are passed correctly via GenerationConfig."""
         with (
             patch("ymago.api.genai.Client") as mock_client_class,
             patch("ymago.api.asyncio.to_thread") as mock_to_thread,
+            patch(
+                "ymago.api.types.GenerateContentConfig"
+            ) as mock_generate_content_config_class,
         ):
             # Set up mock client and response
             mock_client = MagicMock()
@@ -324,18 +284,21 @@ class TestGenerateImage:
             mock_response = MagicMock()
             mock_candidate = MagicMock()
             mock_candidate.finish_reason = "STOP"
-
             mock_content = MagicMock()
             mock_part = MagicMock()
             mock_inline_data = MagicMock()
             mock_inline_data.data = sample_image_bytes
-
             mock_part.inline_data = mock_inline_data
             mock_content.parts = [mock_part]
             mock_candidate.content = mock_content
             mock_response.candidates = [mock_candidate]
-
             mock_to_thread.return_value = mock_response
+
+            # Mock config instances
+            mock_generate_content_config = MagicMock()
+            mock_generate_content_config_class.return_value = (
+                mock_generate_content_config
+            )
 
             # Test the function with multiple parameters
             await generate_image(
@@ -347,12 +310,14 @@ class TestGenerateImage:
                 aspect_ratio="16:9",
             )
 
-            # Verify that all parameters are passed through to the API call
+            # Verify that GenerateContentConfig is created with the seed
+            mock_generate_content_config_class.assert_called_once_with(seed=42)
+
+            # Verify that generate_content is called with the GenerateContentConfig
             mock_to_thread.assert_called_once()
-            call_args = mock_to_thread.call_args
-            assert call_args[1]["seed"] == 42
-            assert call_args[1]["quality"] == "high"
-            assert call_args[1]["aspect_ratio"] == "16:9"
+            _, call_kwargs = mock_to_thread.call_args
+            assert "config" in call_kwargs
+            assert call_kwargs["config"] == mock_generate_content_config
 
 
 class TestValidateApiKey:

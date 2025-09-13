@@ -134,13 +134,15 @@ def generate_image_command(
             # Validate inputs
             if seed is not None and not _validate_seed(seed):
                 console.print(
-                    "[red]Error: Seed must be -1 (for random) or a non-negative integer[/red]"
+                    "[red]Error: Seed must be -1 (for random) "
+                    "or a non-negative integer[/red]"
                 )
                 sys.exit(1)
 
             if aspect_ratio and not _validate_aspect_ratio(aspect_ratio):
                 console.print(
-                    "[red]Error: Aspect ratio must be in format 'width:height' (e.g., '16:9')[/red]"
+                    "[red]Error: Aspect ratio must be in format 'width:height' "
+                    "(e.g., '16:9')[/red]"
                 )
                 sys.exit(1)
 
@@ -252,13 +254,15 @@ def generate_video_command(
             # Validate inputs
             if seed is not None and not _validate_seed(seed):
                 console.print(
-                    "[red]Error: Seed must be -1 (for random) or a non-negative integer[/red]"
+                    "[red]Error: Seed must be -1 (for random) "
+                    "or a non-negative integer[/red]"
                 )
                 sys.exit(1)
 
             if aspect_ratio and not _validate_aspect_ratio(aspect_ratio):
                 console.print(
-                    "[red]Error: Aspect ratio must be in format 'width:height' (e.g., '16:9')[/red]"
+                    "[red]Error: Aspect ratio must be in format 'width:height' "
+                    "(e.g., '16:9')[/red]"
                 )
                 sys.exit(1)
 
