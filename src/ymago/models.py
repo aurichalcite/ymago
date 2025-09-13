@@ -109,33 +109,19 @@ class GenerationJob(BaseModel):
         if not cleaned:
             return None
 
-        # Check if it's a URL
-        is_url = False
-        try:
-            parsed = urlparse(cleaned)
-            if parsed.scheme in ("http", "https") and parsed.netloc:
-                is_url = True
-        except Exception:
-            # Not a valid URL, treat as a path
-            pass
+        def is_valid_url(value: str) -> bool:
+            try:
+                parsed = urlparse(value)
+                return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+            except Exception:
+                return False
 
-        # If it's not a URL, we assume it's a path.
-        # No further validation here, as path existence is checked in the CLI.
-        if not is_url:
-            # It's a path, so we just return it cleaned.
+        if not is_valid_url(cleaned):
+            # Not a valid URL, so we assume it's a path.
+            # No further validation here, as path existence is checked in the CLI.
             return cleaned
 
-        # If it is a URL, perform basic validation.
-        try:
-            parsed = urlparse(cleaned)
-            if not parsed.scheme or not parsed.netloc:
-                raise ValueError("Invalid URL format for source image")
-            if parsed.scheme not in ("http", "https"):
-                raise ValueError("Source image URL must use http or https")
-        except Exception as e:
-            # This will re-raise the validation error for URLs
-            raise ValueError(f"Invalid source image URL: {e}") from e
-
+        # It's a valid URL, so we return it cleaned.
         return cleaned
 
     @field_validator("seed")
