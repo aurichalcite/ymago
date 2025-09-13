@@ -12,10 +12,11 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -23,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6.6.1
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -54,13 +55,15 @@ jobs:
         run: |
           uv run pytest tests/ -v
 
-#      - name: Upload coverage to Codecov
-#        if: matrix.python-version == '3.12'
-#        uses: codecov/codecov-action@v5.5.1
-#        with:
-#          file: ./coverage.xml
-#          fail_ci_if_error: false
-#          verbose: true
+      - name: Generate coverage report
+        run: |
+          uv run coverage run -m pytest tests/
+          uv run coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
 
 
   security-scan:
@@ -75,7 +78,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6.6.1
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         run: |
@@ -105,7 +108,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6.6.1
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         run: |
