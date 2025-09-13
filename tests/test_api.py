@@ -313,8 +313,8 @@ class TestGenerateImage:
             # Verify that generate_content is called with the GenerationConfig instance
             mock_to_thread.assert_called_once()
             call_args, call_kwargs = mock_to_thread.call_args
-            assert "generation_config" in call_kwargs
-            assert call_kwargs["generation_config"] == mock_gen_config_instance
+            assert "config" in call_kwargs
+            assert call_kwargs["config"] == mock_gen_config_instance
 
 
 class TestValidateApiKey:

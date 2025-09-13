@@ -147,7 +147,7 @@ async def generate_image(
             contents.append(image_obj)
 
         # Prepare generation config
-        generation_config = types.GenerationConfig(
+        config = types.GenerationConfig(
             seed=params.get("seed"),
         )
 
@@ -156,7 +156,7 @@ async def generate_image(
             client.models.generate_content,
             model=model,
             contents=contents,
-            generation_config=generation_config,
+            config=config,
         )
 
         # Validate response structure
