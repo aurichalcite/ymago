@@ -2,7 +2,7 @@
 
 
 ymago is a powerful, asynchronous command-line interface (CLI) and Python library designed for developers and creators. It provides a sophisticated, streamlined workflow to harness Google's cutting-edge generative AI models, including Nano Banana for image synthesis and Veo for video generation.
-Engineered to the highest professional standards, ymago is more than just a CLI wrapper. It's a complete toolkit for scalable, reproducible, and integrable media generation, making it an ideal utility for complex pipelines and a standout professional portfolio project.
+Engineered to the highest professional standards, ymago is more than just a CLI wrapper. It's a complete toolkit for scalable, reproducible, and integrable media generation.
 ________________
 
 

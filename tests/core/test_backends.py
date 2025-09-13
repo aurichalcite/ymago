@@ -203,7 +203,8 @@ class TestLocalExecutionBackend:
 
                 with pytest.raises(
                     RuntimeError,
-                    match="Job execution failed.*Job 0 returned unexpected result type str",
+                    match="Job execution failed.*"
+                    "Job 0 returned unexpected result type str",
                 ):
                     await backend.submit(sample_jobs)
 
