@@ -654,8 +654,8 @@ class TestVideoGenerateCommand:
             assert "Error" in result.stdout
             # The rich console might wrap the text, so we check for the parts
             # of the message.
-            assert "valid HTTP/HTTPS URL" in result.stdout
-            assert "existing local file path" in result.stdout.replace("\n", "")
+            output_text = " ".join(result.stdout.strip().split())
+            assert "valid HTTP/HTTPS URL or an existing local file path" in output_text
 
     def test_video_generate_keyboard_interrupt(self, sample_config):
         """Test video generation interrupted by user."""
