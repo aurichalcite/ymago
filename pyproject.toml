@@ -78,3 +78,8 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["google.*", "tenacity.*"]
 ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "bandit>=1.8.6",
+]
