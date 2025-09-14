@@ -88,14 +88,15 @@ ymago image "A photorealistic portrait of an astronaut on Mars" --output-path ./
 ### 2. Advanced Image Generation
 
 
-Use advanced parameters and upload the result directly to a Google Cloud Storage bucket.
+Use advanced parameters and upload the result directly to a Google Cloud Storage bucket with webhook notification.
 
 
 ```bash
 ymago image "A majestic wolf howling at a full moon, fantasy art" \
  --negative-prompt "daylight, clouds, cartoon" \
  --seed 42 \
- --upload-to gs://my-art-bucket/wolves/
+ --destination gs://my-art-bucket/wolves/ \
+ --webhook-url https://api.example.com/webhook
 ```
 
 
@@ -142,6 +143,129 @@ async def main():
 
 if __name__ == "__main__":
    asyncio.run(main())
+
+________________
+
+
+## ☁️ Cloud Storage & Webhook Configuration
+
+
+ymago supports direct upload to cloud storage providers and webhook notifications for production workflows.
+
+### Cloud Storage Providers
+
+#### AWS S3
+```bash
+# Set environment variables
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+# Generate and upload to S3
+ymago image "A sunset over mountains" --destination s3://my-bucket/images/
+```
+
+#### Google Cloud Storage
+```bash
+# Set service account credentials
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+
+# Generate and upload to GCS
+ymago image "A forest in autumn" --destination gs://my-bucket/images/
+```
+
+#### Cloudflare R2
+```bash
+# Set R2 credentials
+export R2_ACCOUNT_ID="your-account-id"
+export R2_ACCESS_KEY_ID="your-access-key"
+export R2_SECRET_ACCESS_KEY="your-secret-key"
+
+# Generate and upload to R2
+ymago image "A city skyline" --destination r2://my-bucket/images/
+```
+
+### Webhook Notifications
+
+Configure webhooks to receive notifications when generation jobs complete:
+
+```bash
+ymago image "A space station" \
+  --destination s3://my-bucket/images/ \
+  --webhook-url https://api.example.com/webhook
+```
+
+#### Webhook Payload
+
+Your webhook endpoint will receive a JSON payload:
+
+```json
+{
+  "job_id": "unique-job-identifier",
+  "job_status": "success",
+  "output_url": "s3://my-bucket/images/generated-image.png",
+  "processing_time_seconds": 5.2,
+  "file_size_bytes": 1048576,
+  "timestamp": "2024-01-15T10:30:00Z",
+  "metadata": {
+    "model": "gemini-nano-banana",
+    "prompt": "A space station",
+    "storage_backend": "cloud"
+  }
+}
+```
+
+For failed jobs:
+```json
+{
+  "job_id": "unique-job-identifier",
+  "job_status": "failure",
+  "error_message": "API quota exceeded",
+  "processing_time_seconds": 1.2,
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+### Configuration File
+
+Add cloud storage and webhook settings to your `ymago.toml`:
+
+```toml
+[cloud_storage]
+aws_access_key_id = "your-access-key"
+aws_secret_access_key = "your-secret-key"
+aws_region = "us-east-1"
+
+gcp_service_account_path = "/path/to/service-account.json"
+
+r2_account_id = "your-account-id"
+r2_access_key_id = "your-access-key"
+r2_secret_access_key = "your-secret-key"
+
+[webhooks]
+enabled = true
+timeout_seconds = 30
+retry_attempts = 3
+retry_backoff_factor = 2.0
+```
+
+### Installation with Cloud Support
+
+Install ymago with cloud storage dependencies:
+
+```bash
+# For AWS S3 support
+pip install "ymago[aws]"
+
+# For Google Cloud Storage support
+pip install "ymago[gcp]"
+
+# For Cloudflare R2 support
+pip install "ymago[r2]"
+
+# For all cloud providers
+pip install "ymago[cloud]"
+```
 
 ________________
 

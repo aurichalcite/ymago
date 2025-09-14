@@ -2,7 +2,8 @@
 Tests for ymago core generation orchestration.
 
 This module tests the process_generation_job function and the complete
-workflow from job input to result output with mocked dependencies.
+workflow from job input to result output with mocked dependencies,
+including cloud storage and webhook notifications.
 """
 
 import time
@@ -397,3 +398,315 @@ class TestProcessGenerationJob:
             # Verify file size matches the generated data
             assert result.file_size_bytes == len(large_image_data)
             assert result.metadata["media_size_bytes"] == len(large_image_data)
+
+
+class TestGenerationWithCloudStorage:
+    """Test generation process with cloud storage backends."""
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_with_s3_destination(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job with S3 destination."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.StorageBackendRegistry") as mock_registry,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
+            # Mock API call
+            mock_generate.return_value = sample_image_bytes
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Mock cloud storage backend
+            mock_backend = AsyncMock()
+            mock_backend.upload.return_value = "s3://test-bucket/uploads/image.png"
+            mock_registry.create_backend.return_value = mock_backend
+
+            # Mock file operations
+            mock_getsize.return_value = 1024
+            mock_exists.return_value = True
+
+            # Configure cloud storage settings
+            sample_config.cloud_storage.aws_access_key_id = "test-key"
+            sample_config.cloud_storage.aws_secret_access_key = "test-secret"
+            sample_config.cloud_storage.aws_region = "us-east-1"
+
+            result = await process_generation_job(
+                sample_generation_job,
+                sample_config,
+                destination_url="s3://test-bucket/uploads/",
+            )
+
+            # Verify cloud storage backend was created and used
+            mock_registry.create_backend.assert_called_once_with(
+                "s3://test-bucket/uploads/",
+                aws_access_key_id="test-key",
+                aws_secret_access_key="test-secret",
+                aws_region="us-east-1",
+            )
+            mock_backend.upload.assert_called_once()
+
+            # Verify result metadata indicates cloud storage
+            assert result.metadata["storage_backend"] == "cloud"
+            assert "job_id" in result.metadata
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_with_gcs_destination(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job with GCS destination."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.StorageBackendRegistry") as mock_registry,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
+            # Mock API call
+            mock_generate.return_value = sample_image_bytes
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Mock cloud storage backend
+            mock_backend = AsyncMock()
+            mock_backend.upload.return_value = "gs://test-bucket/uploads/image.png"
+            mock_registry.create_backend.return_value = mock_backend
+
+            # Mock file operations
+            mock_getsize.return_value = 1024
+            mock_exists.return_value = True
+
+            # Configure GCS settings
+            sample_config.cloud_storage.gcp_service_account_path = Path(
+                "/path/to/service-account.json"
+            )
+
+            result = await process_generation_job(
+                sample_generation_job,
+                sample_config,
+                destination_url="gs://test-bucket/uploads/",
+            )
+
+            # Verify cloud storage backend was created and used
+            mock_registry.create_backend.assert_called_once_with(
+                "gs://test-bucket/uploads/",
+                service_account_path=Path("/path/to/service-account.json"),
+            )
+            mock_backend.upload.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_with_r2_destination_missing_credentials(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job with R2 destination but missing credentials."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+        ):
+            # Mock API call
+            mock_generate.return_value = sample_image_bytes
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Configure incomplete R2 settings (missing credentials)
+            sample_config.cloud_storage.r2_account_id = "test-account"
+            sample_config.cloud_storage.r2_access_key_id = None  # Missing
+            sample_config.cloud_storage.r2_secret_access_key = None  # Missing
+
+            with pytest.raises(StorageError, match="R2 storage requires"):
+                await process_generation_job(
+                    sample_generation_job,
+                    sample_config,
+                    destination_url="r2://test-bucket/uploads/",
+                )
+
+
+class TestGenerationWithWebhooks:
+    """Test generation process with webhook notifications."""
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_with_webhook_success(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job with successful webhook notification."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch(
+                "ymago.core.generation.NotificationService"
+            ) as mock_notification_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
+            # Mock API call
+            mock_generate.return_value = sample_image_bytes
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Mock storage uploader
+            mock_uploader = AsyncMock()
+            mock_uploader.upload.return_value = "/output/test_image.png"
+            mock_uploader_class.return_value = mock_uploader
+
+            # Mock notification service
+            mock_notification_service = AsyncMock()
+            mock_notification_class.return_value = mock_notification_service
+
+            # Mock file operations
+            mock_getsize.return_value = 1024
+            mock_exists.return_value = True
+
+            # Configure webhook settings
+            sample_config.webhooks.timeout_seconds = 30
+            sample_config.webhooks.retry_attempts = 3
+            sample_config.webhooks.retry_backoff_factor = 2.0
+
+            # Create mock session
+            mock_session = AsyncMock()
+
+            result = await process_generation_job(
+                sample_generation_job,
+                sample_config,
+                webhook_url="https://webhook.example.com/notify",
+                session=mock_session,
+            )
+
+            # Verify notification service was created and used
+            mock_notification_class.assert_called_once_with(
+                timeout_seconds=30, retry_attempts=3, retry_backoff_factor=2.0
+            )
+            mock_notification_service.send_notification_async.assert_called_once()
+
+            # Verify webhook call arguments
+            call_args = mock_notification_service.send_notification_async.call_args
+            assert call_args[0][0] == mock_session  # session
+            assert (
+                call_args[0][1] == "https://webhook.example.com/notify"
+            )  # webhook_url
+
+            # Verify payload
+            payload = call_args[0][2]
+            assert payload.job_status == "success"
+            assert payload.output_url == "/output/test_image.png"
+            assert payload.processing_time_seconds > 0
+            assert payload.file_size_bytes == 1024
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_with_webhook_failure_notification(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job failure with webhook notification."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch(
+                "ymago.core.generation.NotificationService"
+            ) as mock_notification_class,
+        ):
+            # Mock API call to fail
+            mock_generate.side_effect = Exception("API error")
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Mock notification service
+            mock_notification_service = AsyncMock()
+            mock_notification_class.return_value = mock_notification_service
+
+            # Configure webhook settings
+            sample_config.webhooks.timeout_seconds = 30
+            sample_config.webhooks.retry_attempts = 3
+            sample_config.webhooks.retry_backoff_factor = 2.0
+
+            # Create mock session
+            mock_session = AsyncMock()
+
+            with pytest.raises(GenerationError):
+                await process_generation_job(
+                    sample_generation_job,
+                    sample_config,
+                    webhook_url="https://webhook.example.com/notify",
+                    session=mock_session,
+                )
+
+            # Verify failure notification was sent
+            mock_notification_service.send_notification_async.assert_called_once()
+
+            # Verify failure webhook call arguments
+            call_args = mock_notification_service.send_notification_async.call_args
+            payload = call_args[0][2]
+            assert payload.job_status == "failure"
+            assert payload.error_message == "API error"
+
+    @pytest.mark.asyncio
+    async def test_process_generation_job_without_webhook_session(
+        self, sample_generation_job, sample_config, sample_image_bytes
+    ):
+        """Test generation job with webhook URL but no session (should not send webhook)."""
+        with (
+            patch(
+                "ymago.core.generation.generate_image", new_callable=AsyncMock
+            ) as mock_generate,
+            patch("ymago.core.generation._create_temp_file") as mock_create_temp,
+            patch("ymago.core.generation.LocalStorageUploader") as mock_uploader_class,
+            patch(
+                "ymago.core.generation.NotificationService"
+            ) as mock_notification_class,
+            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
+            patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
+        ):
+            # Mock API call
+            mock_generate.return_value = sample_image_bytes
+
+            # Mock temp file creation
+            temp_path = Path("/tmp/temp_image.png")
+            mock_create_temp.return_value = temp_path
+
+            # Mock storage uploader
+            mock_uploader = AsyncMock()
+            mock_uploader.upload.return_value = "/output/test_image.png"
+            mock_uploader_class.return_value = mock_uploader
+
+            # Mock file operations
+            mock_getsize.return_value = 1024
+            mock_exists.return_value = True
+
+            result = await process_generation_job(
+                sample_generation_job,
+                sample_config,
+                webhook_url="https://webhook.example.com/notify",
+                session=None,  # No session provided
+            )
+
+            # Verify notification service was NOT created
+            mock_notification_class.assert_not_called()
+
+            # Verify generation still succeeded
+            assert result.file_size_bytes == 1024

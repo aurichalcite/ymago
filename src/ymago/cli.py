@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Annotated, Optional
 
+import aiohttp
 import typer
 from rich.console import Console
 from rich.progress import (
@@ -94,6 +95,12 @@ def _validate_seed(seed: int) -> bool:
     return seed == -1 or seed >= 0
 
 
+def _validate_destination_url(url: str) -> bool:
+    """Validate that a destination URL has a supported scheme."""
+    supported_schemes = ["s3://", "gs://", "r2://", "file://"]
+    return any(url.lower().startswith(scheme) for scheme in supported_schemes)
+
+
 @image_app.command("generate")
 def generate_image_command(
     prompt: Annotated[str, typer.Argument(help="Text prompt for image generation")],
@@ -144,6 +151,23 @@ def generate_image_command(
             help="URL of source image for image-to-image generation",
         ),
     ] = None,
+    destination: Annotated[
+        Optional[str],
+        typer.Option(
+            "--destination",
+            "-d",
+            help="Cloud storage destination (e.g., s3://bucket/path, gs://bucket/path)",
+            rich_help_panel="Output & Delivery",
+        ),
+    ] = None,
+    webhook_url: Annotated[
+        Optional[str],
+        typer.Option(
+            "--webhook-url",
+            help="Webhook URL for job completion notifications",
+            rich_help_panel="Output & Delivery",
+        ),
+    ] = None,
     model: Annotated[
         Optional[str],
         typer.Option("--model", "-m", help="AI model to use for generation"),
@@ -157,8 +181,9 @@ def generate_image_command(
     Generate an image from a text prompt.
 
     This command generates an image using Google's Generative AI and saves it
-    to the configured output directory. It supports advanced features like
-    negative prompts and image-to-image generation.
+    to the configured output directory or cloud storage. It supports advanced
+    features like negative prompts, image-to-image generation, cloud storage
+    destinations, and webhook notifications.
 
     Examples:
         ymago image generate "A beautiful sunset over mountains"
@@ -166,6 +191,8 @@ def generate_image_command(
         ymago image generate "Abstract art" -q high -a 16:9
         ymago image generate "A forest scene" -n "buildings, cars"
         ymago image generate "Transform this image" --from-image "https://.../image.jpg"
+        ymago image generate "Cloud storage" -d "s3://my-bucket/images/"
+        ymago image generate "With webhook" --webhook-url "https://api.example.com/webhook"
     """
 
     async def _async_generate() -> None:
@@ -188,6 +215,13 @@ def generate_image_command(
             if from_image and not _validate_url(from_image):
                 console.print(
                     "[red]Error: Source image must be a valid HTTP/HTTPS URL[/red]"
+                )
+                sys.exit(1)
+
+            if destination and not _validate_destination_url(destination):
+                console.print(
+                    "[red]Error: Destination must be a valid cloud storage URL "
+                    "(s3://, gs://, r2://, or file://)[/red]"
                 )
                 sys.exit(1)
 
@@ -215,9 +249,23 @@ def generate_image_command(
                 _display_job_info(job)
 
             # Generate image with progress indication
-            with Status("Generating image...", console=console) as status:
-                result = await process_generation_job(job, config)
-                status.update("Saving image...")
+            session = None
+            if webhook_url:
+                session = aiohttp.ClientSession()
+
+            try:
+                with Status("Generating image...", console=console) as status:
+                    result = await process_generation_job(
+                        job,
+                        config,
+                        destination_url=destination,
+                        webhook_url=webhook_url,
+                        session=session,
+                    )
+                    status.update("Saving image...")
+            finally:
+                if session:
+                    await session.close()
 
             # Display success message
             _display_success(result, verbose)
@@ -281,6 +329,23 @@ def generate_video_command(
         Optional[str],
         typer.Option("--model", "-m", help="AI model to use for video generation"),
     ] = None,
+    destination: Annotated[
+        Optional[str],
+        typer.Option(
+            "--destination",
+            "-d",
+            help="Cloud storage destination (e.g., s3://bucket/path, gs://bucket/path)",
+            rich_help_panel="Output & Delivery",
+        ),
+    ] = None,
+    webhook_url: Annotated[
+        Optional[str],
+        typer.Option(
+            "--webhook-url",
+            help="Webhook URL for job completion notifications",
+            rich_help_panel="Output & Delivery",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output"),
@@ -324,6 +389,13 @@ def generate_video_command(
                 )
                 sys.exit(1)
 
+            if destination and not _validate_destination_url(destination):
+                console.print(
+                    "[red]Error: Destination must be a valid cloud storage URL "
+                    "(s3://, gs://, r2://, or file://)[/red]"
+                )
+                sys.exit(1)
+
             # Load configuration
             with Status("Loading configuration...", console=console) as status:
                 config = await load_config()
@@ -348,11 +420,26 @@ def generate_video_command(
                 _display_job_info(job)
 
             # Generate video with progress indication
-            with Status(
-                "Generating video (this may take several minutes)...", console=console
-            ) as status:
-                result = await process_generation_job(job, config)
-                status.update("Saving video...")
+            session = None
+            if webhook_url:
+                session = aiohttp.ClientSession()
+
+            try:
+                with Status(
+                    "Generating video (this may take several minutes)...",
+                    console=console,
+                ) as status:
+                    result = await process_generation_job(
+                        job,
+                        config,
+                        destination_url=destination,
+                        webhook_url=webhook_url,
+                        session=session,
+                    )
+                    status.update("Saving video...")
+            finally:
+                if session:
+                    await session.close()
 
             # Display success message
             _display_video_success(result, verbose)
