@@ -94,7 +94,7 @@ def _validate_seed(seed: int) -> bool:
     return seed == -1 or seed >= 0
 
 
-@image_app.command("generate")  # type: ignore[misc]
+@image_app.command("generate")
 def generate_image_command(
     prompt: Annotated[str, typer.Argument(help="Text prompt for image generation")],
     output_filename: Annotated[
@@ -235,7 +235,7 @@ def generate_image_command(
     asyncio.run(_async_generate())
 
 
-@video_app.command("generate")  # type: ignore[misc]
+@video_app.command("generate")
 def generate_video_command(
     prompt: Annotated[str, typer.Argument(help="Text prompt for video generation")],
     output_filename: Annotated[
@@ -458,7 +458,7 @@ def _display_video_success(result: "GenerationResult", verbose: bool = False) ->
         console.print(table)
 
 
-@app.command("version")  # type: ignore[misc]
+@app.command("version")
 def version_command() -> None:
     """Display version information."""
     from . import __version__
@@ -466,7 +466,7 @@ def version_command() -> None:
     console.print(f"ymago version {__version__}")
 
 
-@app.command("config")  # type: ignore[misc]
+@app.command("config")
 def config_command(
     show_path: Annotated[
         bool,
@@ -523,7 +523,7 @@ def config_command(
     asyncio.run(_async_config())
 
 
-@batch_app.command("run")  # type: ignore[misc]
+@batch_app.command("run")
 def run_batch_command(
     input_file: Annotated[
         Path,
