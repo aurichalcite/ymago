@@ -6,7 +6,7 @@ data structures used throughout the application.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional
 
@@ -228,7 +228,7 @@ class GenerationRequest(BaseModel):
 
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
-        description="Unique identifier for this request within the batch"
+        description="Unique identifier for this request within the batch",
     )
 
     prompt: str = Field(
@@ -321,9 +321,7 @@ class BatchResult(BaseModel):
     with detailed metadata for tracking and debugging.
     """
 
-    request_id: str = Field(
-        ..., description="ID of the original GenerationRequest"
-    )
+    request_id: str = Field(..., description="ID of the original GenerationRequest")
 
     status: Literal["success", "failure", "skipped"] = Field(
         ..., description="Processing status of this request"
@@ -346,7 +344,7 @@ class BatchResult(BaseModel):
     )
 
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="ISO timestamp when processing completed",
     )
 
@@ -380,21 +378,15 @@ class BatchSummary(BaseModel):
         ..., description="Number of successfully processed requests", ge=0
     )
 
-    failed: int = Field(
-        ..., description="Number of failed requests", ge=0
-    )
+    failed: int = Field(..., description="Number of failed requests", ge=0)
 
-    skipped: int = Field(
-        ..., description="Number of skipped requests", ge=0
-    )
+    skipped: int = Field(..., description="Number of skipped requests", ge=0)
 
     processing_time_seconds: float = Field(
         ..., description="Total time for batch processing", ge=0.0
     )
 
-    results_log_path: str = Field(
-        ..., description="Path to detailed results log file"
-    )
+    results_log_path: str = Field(..., description="Path to detailed results log file")
 
     rejected_rows_path: Optional[str] = Field(
         default=None,
@@ -406,12 +398,12 @@ class BatchSummary(BaseModel):
     )
 
     start_time: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="ISO timestamp when batch processing started",
     )
 
     end_time: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="ISO timestamp when batch processing completed",
     )
 

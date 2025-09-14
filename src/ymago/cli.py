@@ -12,10 +12,20 @@ from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.status import Status
 from rich.table import Table
 
 from .config import load_config
+from .core.backends import LocalExecutionBackend
+from .core.batch_parser import parse_batch_input
 from .core.generation import process_generation_job
 from .models import GenerationJob, GenerationResult
 
@@ -40,9 +50,17 @@ video_app = typer.Typer(
     no_args_is_help=True,
 )
 
+# Create a sub-application for batch commands
+batch_app = typer.Typer(
+    name="batch",
+    help="Batch processing commands",
+    no_args_is_help=True,
+)
+
 # Add the sub-applications to the main app
 app.add_typer(image_app, name="image")
 app.add_typer(video_app, name="video")
+app.add_typer(batch_app, name="batch")
 
 # Create console for rich output
 console = Console()
@@ -476,6 +494,241 @@ def config_command(
 
     # Run the async function
     asyncio.run(_async_config())
+
+
+@batch_app.command("run")
+def run_batch_command(
+    input_file: Path = typer.Argument(
+        ..., help="Path to CSV or JSONL input file containing generation requests"
+    ),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        "-o",
+        help="Directory for storing results, logs, and state files",
+    ),
+    concurrency: int = typer.Option(
+        10,
+        "--concurrency",
+        "-c",
+        help="Maximum parallel requests (1-50)",
+        min=1,
+        max=50,
+    ),
+    rate_limit: int = typer.Option(
+        60, "--rate-limit", "-r", help="Maximum requests per minute", min=1, max=300
+    ),
+    resume: bool = typer.Option(
+        False, "--resume/--no-resume", help="Resume from checkpoint in output directory"
+    ),
+    format_hint: Optional[str] = typer.Option(
+        None,
+        "--format",
+        "-f",
+        help="Input format (csv, jsonl, or auto-detect if not specified)",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Validate input and show plan without execution"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose output"
+    ),
+) -> None:
+    """
+    Process a batch of generation requests from a CSV or JSONL file.
+
+    This command processes multiple generation requests concurrently with
+    resilient execution, rate limiting, and checkpoint-based resumption.
+
+    Examples:
+        ymago batch run prompts.csv --output-dir ./results/
+        ymago batch run requests.jsonl -o ./batch_output/ --concurrency 20
+        ymago batch run data.csv -o ./results/ --resume --rate-limit 120
+        ymago batch run prompts.csv -o ./test/ --dry-run
+    """
+    asyncio.run(
+        _async_run_batch(
+            input_file=input_file,
+            output_dir=output_dir,
+            concurrency=concurrency,
+            rate_limit=rate_limit,
+            resume=resume,
+            format_hint=format_hint,
+            dry_run=dry_run,
+            verbose=verbose,
+        )
+    )
+
+
+async def _async_run_batch(
+    input_file: Path,
+    output_dir: Path,
+    concurrency: int,
+    rate_limit: int,
+    resume: bool,
+    format_hint: Optional[str],
+    dry_run: bool,
+    verbose: bool,
+) -> None:
+    """Async implementation of batch processing command."""
+    try:
+        # Validate input file exists
+        if not input_file.exists():
+            console.print(f"[red]Error: Input file not found: {input_file}[/red]")
+            sys.exit(1)
+
+        # Validate output directory is writable
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            test_file = output_dir / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+        except Exception as e:
+            console.print(
+                f"[red]Error: Cannot write to output directory {output_dir}: {e}[/red]"
+            )
+            sys.exit(1)
+
+        # Load configuration
+        with Status("Loading configuration...", console=console):
+            await load_config()
+
+        if verbose:
+            console.print("✓ Configuration loaded")
+            console.print(f"✓ Input file: {input_file}")
+            console.print(f"✓ Output directory: {output_dir}")
+            console.print(f"✓ Concurrency: {concurrency}")
+            console.print(f"✓ Rate limit: {rate_limit} requests/minute")
+
+        # Parse and validate input
+        console.print("\n[bold blue]Parsing input file...[/bold blue]")
+
+        request_count = 0
+
+        # Count requests and validate (for dry run and progress tracking)
+        async for request in parse_batch_input(input_file, output_dir, format_hint):
+            request_count += 1
+            if dry_run and request_count <= 5:  # Show first 5 requests in dry run
+                console.print(f"  Request {request_count}: {request.prompt[:50]}...")
+
+        if request_count == 0:
+            console.print("[yellow]No valid requests found in input file[/yellow]")
+            sys.exit(0)
+
+        console.print(f"✓ Found {request_count} valid requests")
+
+        # Check for rejected rows file
+        rejected_file = output_dir / f"{input_file.stem}.rejected.csv"
+        if rejected_file.exists():
+            console.print(
+                f"[yellow]⚠ Rejected rows file exists: {rejected_file}[/yellow]"
+            )
+
+        if dry_run:
+            console.print("\n[green]Dry run completed successfully![/green]")
+            console.print(f"Would process {request_count} requests with:")
+            console.print(f"  • Concurrency: {concurrency}")
+            console.print(f"  • Rate limit: {rate_limit} requests/minute")
+            console.print(
+                f"  • Estimated time: {_estimate_processing_time(request_count, rate_limit)}"
+            )
+            return
+
+        # Initialize backend and start processing
+        backend = LocalExecutionBackend(max_concurrent_jobs=concurrency)
+
+        console.print("\n[bold green]Starting batch processing...[/bold green]")
+
+        # Create progress display
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            # Add progress task
+            task = progress.add_task(
+                f"Processing {request_count} requests...", total=request_count
+            )
+
+            # Process batch
+
+            # Re-parse requests for processing
+            requests_generator = parse_batch_input(input_file, output_dir, format_hint)
+
+            summary = await backend.process_batch(
+                requests=requests_generator,
+                output_dir=output_dir,
+                concurrency=concurrency,
+                rate_limit=rate_limit,
+                resume=resume,
+            )
+
+            progress.update(task, completed=request_count)
+
+        # Display results
+        _display_batch_summary(summary, verbose)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Batch processing cancelled by user[/yellow]")
+        console.print("Progress has been saved. Use --resume to continue.")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        sys.exit(1)
+
+
+def _estimate_processing_time(request_count: int, rate_limit: int) -> str:
+    """Estimate processing time based on rate limit."""
+    minutes = request_count / rate_limit
+    if minutes < 1:
+        return f"{int(minutes * 60)} seconds"
+    elif minutes < 60:
+        return f"{minutes:.1f} minutes"
+    else:
+        hours = minutes / 60
+        return f"{hours:.1f} hours"
+
+
+def _display_batch_summary(summary, verbose: bool) -> None:
+    """Display batch processing summary with rich formatting."""
+    console.print("\n[bold green]Batch Processing Complete![/bold green]")
+
+    # Create summary table
+    table = Table(
+        title="Batch Processing Summary", show_header=True, header_style="bold magenta"
+    )
+    table.add_column("Metric", style="cyan", no_wrap=True)
+    table.add_column("Value", style="white")
+
+    table.add_row("Total Requests", str(summary.total_requests))
+    table.add_row("Successful", f"[green]{summary.successful}[/green]")
+    table.add_row("Failed", f"[red]{summary.failed}[/red]")
+    table.add_row("Skipped", f"[yellow]{summary.skipped}[/yellow]")
+    table.add_row("Success Rate", f"{summary.success_rate:.1f}%")
+    table.add_row("Processing Time", f"{summary.processing_time_seconds:.1f} seconds")
+    table.add_row(
+        "Throughput", f"{summary.throughput_requests_per_minute:.1f} requests/minute"
+    )
+
+    console.print(table)
+
+    # Show file locations
+    console.print("\n[bold]Output Files:[/bold]")
+    console.print(f"  • Results log: {summary.results_log_path}")
+    if summary.rejected_rows_path:
+        console.print(f"  • Rejected rows: {summary.rejected_rows_path}")
+
+    if verbose and summary.failed > 0:
+        console.print(
+            "\n[yellow]Check the results log for detailed error information[/yellow]"
+        )
 
 
 def main() -> None:
