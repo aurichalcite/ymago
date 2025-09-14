@@ -302,7 +302,7 @@ class LocalExecutionBackend(ExecutionBackend):
             await rate_limiter.acquire()
 
             async with semaphore:
-                return await self._process_request_with_retry(  # type: ignore
+                return await self._process_request_with_retry(
                     request, output_dir, state_file
                 )
 
