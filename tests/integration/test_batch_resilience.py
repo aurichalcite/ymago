@@ -175,19 +175,16 @@ class TestBatchResilience:
                         file_size_bytes=1024,
                     )
 
-            with patch("ymago.core.backends.load_config") as mock_config:
-                with patch(
-                    "ymago.core.backends.process_generation_job",
-                    side_effect=mock_process_job,
-                ):
-                    mock_config.return_value = MagicMock()
+            with patch(
+                "ymago.core.generation.process_generation_job",
+                side_effect=mock_process_job,
+            ) as mock_process:
+                result = await backend._process_request_with_retry(
+                    request, output_dir, state_file
+                )
 
-                    result = await backend._process_request_with_retry(
-                        request, output_dir, state_file
-                    )
-
-                    assert result.status == "success"
-                    assert call_count == 3  # Should have retried twice
+                assert result.status == "success"
+                assert call_count == 3  # Should have retried twice
 
     @pytest.mark.asyncio
     async def test_permanent_failure_handling(self, backend):
@@ -199,22 +196,16 @@ class TestBatchResilience:
             request = GenerationRequest(id="test_req", prompt="Test prompt")
 
             # Mock permanent failure
-            with patch("ymago.core.backends.load_config") as mock_config:
-                with patch(
-                    "ymago.core.backends.process_generation_job"
-                ) as mock_process:
-                    mock_config.return_value = MagicMock()
-                    mock_process.side_effect = ConnectionError(
-                        "Permanent network failure"
-                    )
+            with patch("ymago.core.generation.process_generation_job") as mock_process:
+                mock_process.side_effect = ConnectionError("Permanent network failure")
 
-                    result = await backend._process_request_with_retry(
-                        request, output_dir, state_file
-                    )
+                result = await backend._process_request_with_retry(
+                    request, output_dir, state_file
+                )
 
-                    assert result.status == "failure"
-                    assert "Permanent network failure" in result.error_message
-                    assert result.processing_time_seconds > 0
+                assert result.status == "failure"
+                assert "Permanent network failure" in result.error_message
+                assert result.processing_time_seconds > 0
 
     @pytest.mark.asyncio
     async def test_checkpoint_atomicity(self, backend):

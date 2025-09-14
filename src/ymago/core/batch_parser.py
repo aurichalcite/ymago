@@ -8,7 +8,7 @@ robust error handling, memory efficiency, and detailed rejection tracking.
 import json
 import logging
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import aiocsv
 import aiofiles
@@ -230,7 +230,7 @@ async def _parse_jsonl_file(
                 logger.error(f"Row {row_number} failed: {error_msg}")
 
 
-def _clean_row_data(row: Dict[str, str]) -> Dict[str, str]:
+def _clean_row_data(row: Dict[str, str]) -> Dict[str, Any]:
     """
     Clean and normalize row data for GenerationRequest creation.
 
@@ -238,9 +238,9 @@ def _clean_row_data(row: Dict[str, str]) -> Dict[str, str]:
         row: Raw row data from CSV or JSON
 
     Returns:
-        Dict[str, str]: Cleaned row data
+        Dict[str, Any]: Cleaned row data
     """
-    cleaned = {}
+    cleaned: Dict[str, Any] = {}
 
     # Define field mappings and aliases
     field_mappings = {

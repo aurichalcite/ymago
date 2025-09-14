@@ -88,7 +88,7 @@ def _classify_exception(exc: Exception) -> Exception:
     return APIError(f"API error: {exc}")
 
 
-@retry(
+@retry(  # type: ignore
     wait=wait_random_exponential(multiplier=RETRY_MULTIPLIER, max=RETRY_MAX_WAIT),
     stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
     retry=retry_if_exception_type((NetworkError, QuotaExceededError)),
@@ -229,7 +229,7 @@ async def generate_image(
         raise classified_exc from exc
 
 
-@retry(
+@retry(  # type: ignore
     wait=wait_random_exponential(multiplier=RETRY_MULTIPLIER, max=RETRY_MAX_WAIT),
     stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
     retry=retry_if_exception_type((NetworkError, QuotaExceededError)),
@@ -347,7 +347,7 @@ async def generate_video(
             raise InvalidResponseError("Video data is empty")
 
         logger.info(f"Successfully generated video, size: {len(video_bytes)} bytes")
-        return video_bytes
+        return bytes(video_bytes)
 
     except Exception as exc:
         # Classify and re-raise the exception

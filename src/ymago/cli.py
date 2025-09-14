@@ -27,7 +27,7 @@ from .config import load_config
 from .core.backends import LocalExecutionBackend
 from .core.batch_parser import parse_batch_input
 from .core.generation import process_generation_job
-from .models import GenerationJob, GenerationResult
+from .models import BatchSummary, GenerationJob, GenerationResult
 
 # Create the main Typer application
 app = typer.Typer(
@@ -94,7 +94,7 @@ def _validate_seed(seed: int) -> bool:
     return seed == -1 or seed >= 0
 
 
-@image_app.command("generate")
+@image_app.command("generate")  # type: ignore
 def generate_image_command(
     prompt: str = typer.Argument(..., help="Text prompt for image generation"),
     output_filename: Optional[str] = typer.Option(
@@ -221,7 +221,7 @@ def generate_image_command(
     asyncio.run(_async_generate())
 
 
-@video_app.command("generate")
+@video_app.command("generate")  # type: ignore
 def generate_video_command(
     prompt: str = typer.Argument(..., help="Text prompt for video generation"),
     output_filename: Optional[str] = typer.Option(
@@ -432,7 +432,7 @@ def _display_video_success(result: "GenerationResult", verbose: bool = False) ->
         console.print(table)
 
 
-@app.command("version")
+@app.command("version")  # type: ignore
 def version_command() -> None:
     """Display version information."""
     from . import __version__
@@ -440,7 +440,7 @@ def version_command() -> None:
     console.print(f"ymago version {__version__}")
 
 
-@app.command("config")
+@app.command("config")  # type: ignore
 def config_command(
     show_path: bool = typer.Option(
         False, "--show-path", help="Show the configuration file path"
@@ -496,7 +496,7 @@ def config_command(
     asyncio.run(_async_config())
 
 
-@batch_app.command("run")
+@batch_app.command("run")  # type: ignore
 def run_batch_command(
     input_file: Annotated[
         Path,
@@ -699,7 +699,7 @@ def _estimate_processing_time(request_count: int, rate_limit: int) -> str:
         return f"{hours:.1f} hours"
 
 
-def _display_batch_summary(summary, verbose: bool) -> None:
+def _display_batch_summary(summary: BatchSummary, verbose: bool) -> None:
     """Display batch processing summary with rich formatting."""
     console.print("\n[bold green]Batch Processing Complete![/bold green]")
 

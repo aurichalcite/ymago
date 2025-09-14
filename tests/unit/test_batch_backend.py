@@ -173,21 +173,17 @@ class TestLocalExecutionBackendBatch:
                 metadata={"test": "data"},
             )
 
-            with patch("ymago.core.backends.load_config") as mock_config:
-                with patch(
-                    "ymago.core.backends.process_generation_job"
-                ) as mock_process:
-                    mock_config.return_value = MagicMock()
-                    mock_process.return_value = mock_result
+            with patch("ymago.core.generation.process_generation_job") as mock_process:
+                mock_process.return_value = mock_result
 
-                    result = await backend._process_request_with_retry(
-                        request, output_dir, state_file
-                    )
+                result = await backend._process_request_with_retry(
+                    request, output_dir, state_file
+                )
 
-                    assert result.request_id == "test_req"
-                    assert result.status == "success"
-                    assert result.output_path == str(mock_result.local_path)
-                    assert result.file_size_bytes == 1024
+                assert result.request_id == "test_req"
+                assert result.status == "success"
+                assert result.output_path == str(mock_result.local_path)
+                assert result.file_size_bytes == 1024
 
     @pytest.mark.asyncio
     async def test_process_request_with_retry_failure(self, backend):
@@ -199,21 +195,17 @@ class TestLocalExecutionBackendBatch:
             request = GenerationRequest(id="test_req", prompt="Test prompt")
 
             # Mock the dependencies to raise an exception
-            with patch("ymago.core.backends.load_config") as mock_config:
-                with patch(
-                    "ymago.core.backends.process_generation_job"
-                ) as mock_process:
-                    mock_config.return_value = MagicMock()
-                    mock_process.side_effect = Exception("Test error")
+            with patch("ymago.core.generation.process_generation_job") as mock_process:
+                mock_process.side_effect = Exception("Test error")
 
-                    result = await backend._process_request_with_retry(
-                        request, output_dir, state_file
-                    )
+                result = await backend._process_request_with_retry(
+                    request, output_dir, state_file
+                )
 
-                    assert result.request_id == "test_req"
-                    assert result.status == "failure"
-                    assert "Test error" in result.error_message
-                    assert result.processing_time_seconds > 0
+                assert result.request_id == "test_req"
+                assert result.status == "failure"
+                assert "Test error" in result.error_message
+                assert result.processing_time_seconds > 0
 
     @pytest.mark.asyncio
     async def test_process_batch_basic(self, backend, sample_requests):
