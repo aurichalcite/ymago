@@ -208,13 +208,11 @@ class LocalExecutionBackend(ExecutionBackend):
             try:
                 result = await process_func(job, config)
 
-                # Only add metadata if result is a GenerationResult
-                if isinstance(result, GenerationResult):
-                    # Add execution metadata
-                    execution_time = time.time() - start_time
-                    result.generation_time_seconds = execution_time
-                    result.add_metadata("execution_backend", "local")
-                    result.add_metadata("execution_time", execution_time)
+                # Add execution metadata
+                execution_time = time.time() - start_time
+                result.generation_time_seconds = execution_time
+                result.add_metadata("execution_backend", "local")
+                result.add_metadata("execution_time", execution_time)
 
                 return result
 
@@ -295,7 +293,7 @@ class LocalExecutionBackend(ExecutionBackend):
                 return BatchResult(
                     request_id=request.id,
                     status="skipped",
-                    timestamp=time.time(),
+                    timestamp=str(time.time()),
                 )
 
             # Apply rate limiting

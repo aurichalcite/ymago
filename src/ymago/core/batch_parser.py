@@ -8,7 +8,7 @@ robust error handling, memory efficiency, and detailed rejection tracking.
 import json
 import logging
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import aiocsv
 import aiofiles
@@ -182,11 +182,14 @@ async def _parse_jsonl_file(
             if not line:  # Skip empty lines
                 continue
 
+            row_data: Dict[str, Any] = {
+                "raw_line": line
+            }  # Initialize for error handling
             try:
                 # Parse JSON line
                 row_data = json.loads(line)
 
-                if not isinstance(row_data, dict):
+                if not isinstance(row_data, dict):  # type: ignore[reportUnnecessaryIsInstance]
                     raise ValueError("Each line must be a JSON object")
 
                 # Clean and validate row data
@@ -211,7 +214,7 @@ async def _parse_jsonl_file(
                 error_msg = _format_validation_error(e)
                 rejected_row = RejectedRow(
                     row_number=row_number,
-                    raw_data=row_data if "row_data" in locals() else {"raw_line": line},
+                    raw_data=row_data,
                     error_message=error_msg,
                     error_type="validation_error",
                 )
@@ -222,7 +225,7 @@ async def _parse_jsonl_file(
                 error_msg = f"Unexpected error: {str(e)}"
                 rejected_row = RejectedRow(
                     row_number=row_number,
-                    raw_data=row_data if "row_data" in locals() else {"raw_line": line},
+                    raw_data=row_data,
                     error_message=error_msg,
                     error_type="parsing_error",
                 )
@@ -230,7 +233,7 @@ async def _parse_jsonl_file(
                 logger.error(f"Row {row_number} failed: {error_msg}")
 
 
-def _clean_row_data(row: Dict[str, str]) -> Dict[str, str]:
+def _clean_row_data(row: Dict[str, Any]) -> Dict[str, Any]:
     """
     Clean and normalize row data for GenerationRequest creation.
 
@@ -238,9 +241,9 @@ def _clean_row_data(row: Dict[str, str]) -> Dict[str, str]:
         row: Raw row data from CSV or JSON
 
     Returns:
-        Dict[str, str]: Cleaned row data
+        Dict[str, Any]: Cleaned row data with properly typed values
     """
-    cleaned = {}
+    cleaned: Dict[str, Any] = {}
 
     # Define field mappings and aliases
     field_mappings = {
@@ -269,6 +272,13 @@ def _clean_row_data(row: Dict[str, str]) -> Dict[str, str]:
                     except ValueError as e:
                         # Invalid seed should cause validation error
                         raise ValueError(f"Invalid seed value: {value}") from e
+                elif target_field == "media_type":
+                    # Ensure media_type is properly typed as Literal
+                    if value not in ["image", "video"]:
+                        raise ValueError(
+                            f"Invalid media_type: {value}. Must be 'image' or 'video'"
+                        )
+                    cleaned[target_field] = value
                 else:
                     cleaned[target_field] = value
                 break

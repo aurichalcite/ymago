@@ -206,7 +206,7 @@ class TestWriteMetadata:
         """Test metadata writing with invalid data."""
         # Test that Pydantic validation works at model creation time
         with pytest.raises(ValueError, match="Field required"):
-            MetadataModel(
+            MetadataModel(  # type: ignore[call-arg]
                 prompt="Test prompt",
                 # Missing required model_name and seed
             )

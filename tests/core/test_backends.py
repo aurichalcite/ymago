@@ -44,7 +44,7 @@ class TestExecutionBackendInterface:
 
         # This should fail since get_status is not implemented
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            IncompleteBackend()
+            IncompleteBackend()  # type: ignore[abstract]
 
 
 class TestLocalExecutionBackend:
@@ -61,7 +61,7 @@ class TestLocalExecutionBackend:
         return Settings(
             auth=Auth(google_api_key="test_key"),
             defaults=Defaults(
-                output_path="/tmp/test",
+                output_path=Path("/tmp/test"),
                 image_model="test-model",
                 video_model="test-video-model",
             ),

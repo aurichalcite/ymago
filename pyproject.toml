@@ -90,6 +90,11 @@ packages = ["src/ymago"]
 [project.scripts]
 ymago = "ymago.cli:app"
 
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31.4",
+]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
@@ -104,3 +109,42 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["google.*", "tenacity.*"]
 ignore_missing_imports = true
+
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+pythonPlatform = "All"
+include = ["src", "tests"]
+exclude = [".venv", "build", "dist", ".mypy_cache", ".pytest_cache", ".ruff_cache"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = true
+reportOptionalContextManager = true
+reportOptionalOperand = true
+reportTypedDictNotRequiredAccess = true
+reportPrivateImportUsage = true
+reportConstantRedefinition = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportOverlappingOverload = true
+reportMissingSuperCall = false
+reportUninitializedInstanceVariable = true
+reportInvalidStringEscapeSequence = true
+reportInvalidTypeVarUse = true
+reportCallInDefaultInitializer = true
+reportUnnecessaryIsInstance = true
+reportUnnecessaryCast = true
+reportUnnecessaryComparison = true
+reportAssertAlwaysTrue = true
+reportSelfClsParameterName = true
+reportUnusedExpression = true
+reportUnnecessaryTypeIgnoreComment = true
+reportMatchNotExhaustive = true

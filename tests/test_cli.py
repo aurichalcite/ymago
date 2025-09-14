@@ -5,6 +5,7 @@ This module tests the Typer CLI commands, parameter parsing, output validation,
 and error handling using CliRunner.
 """
 
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -17,6 +18,8 @@ from ymago.core.generation import GenerationError, StorageError
 
 class TestCLIRunner:
     """Test CLI commands using Typer's CliRunner."""
+
+    runner: CliRunner = None  # type: ignore[assignment]
 
     def setup_method(self):
         """Set up test runner for each test."""
@@ -63,6 +66,8 @@ class TestCLIRunner:
 
 class TestConfigCommand:
     """Test the config command."""
+
+    runner: CliRunner = None  # type: ignore[assignment]
 
     def setup_method(self):
         """Set up test runner for each test."""
@@ -122,6 +127,8 @@ class TestConfigCommand:
 
 class TestImageGenerateCommand:
     """Test the image generate command."""
+
+    runner: CliRunner = None  # type: ignore[assignment]
 
     def setup_method(self):
         """Set up test runner for each test."""
@@ -299,6 +306,8 @@ class TestImageGenerateCommand:
 class TestParameterValidation:
     """Test CLI parameter validation and parsing."""
 
+    runner: CliRunner = None  # type: ignore[assignment]
+
     def setup_method(self):
         """Set up test runner for each test."""
         self.runner = CliRunner()
@@ -365,6 +374,8 @@ class TestParameterValidation:
 class TestVideoGenerateCommand:
     """Test video generation command functionality."""
 
+    runner: CliRunner = None  # type: ignore[assignment]
+
     def setup_method(self):
         """Set up test runner for each test."""
         self.runner = CliRunner()
@@ -377,7 +388,7 @@ class TestVideoGenerateCommand:
         return Settings(
             auth=Auth(google_api_key="test_key"),
             defaults=Defaults(
-                output_path="/tmp/test",
+                output_path=Path("/tmp/test"),
                 image_model="test-image-model",
                 video_model="test-video-model",
             ),

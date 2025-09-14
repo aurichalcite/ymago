@@ -96,48 +96,62 @@ def _validate_seed(seed: int) -> bool:
 
 @image_app.command("generate")
 def generate_image_command(
-    prompt: str = typer.Argument(..., help="Text prompt for image generation"),
-    output_filename: Optional[str] = typer.Option(
-        None,
-        "--filename",
-        "-f",
-        help="Custom filename for the generated image (without extension)",
-    ),
-    seed: Optional[int] = typer.Option(
-        None,
-        "--seed",
-        "-s",
-        help="Random seed for reproducible generation (-1 for random)",
-    ),
-    quality: Optional[str] = typer.Option(
-        "standard",
-        "--quality",
-        "-q",
-        help="Image quality setting (draft, standard, high)",
-    ),
-    aspect_ratio: Optional[str] = typer.Option(
-        "1:1",
-        "--aspect-ratio",
-        "-a",
-        help="Aspect ratio for the image (1:1, 16:9, 9:16, 4:3, 3:4)",
-    ),
-    negative_prompt: Optional[str] = typer.Option(
-        None,
-        "--negative-prompt",
-        "-n",
-        help="Text describing what to avoid in the generated image",
-    ),
-    from_image: Optional[str] = typer.Option(
-        None,
-        "--from-image",
-        help="URL of source image for image-to-image generation",
-    ),
-    model: Optional[str] = typer.Option(
-        None, "--model", "-m", help="AI model to use for generation"
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    prompt: Annotated[str, typer.Argument(help="Text prompt for image generation")],
+    output_filename: Annotated[
+        Optional[str],
+        typer.Option(
+            "--filename",
+            "-f",
+            help="Custom filename for the generated image (without extension)",
+        ),
+    ] = None,
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            "--seed",
+            "-s",
+            help="Random seed for reproducible generation (-1 for random)",
+        ),
+    ] = None,
+    quality: Annotated[
+        Optional[str],
+        typer.Option(
+            "--quality",
+            "-q",
+            help="Image quality setting (draft, standard, high)",
+        ),
+    ] = "standard",
+    aspect_ratio: Annotated[
+        Optional[str],
+        typer.Option(
+            "--aspect-ratio",
+            "-a",
+            help="Aspect ratio for the image (1:1, 16:9, 9:16, 4:3, 3:4)",
+        ),
+    ] = "1:1",
+    negative_prompt: Annotated[
+        Optional[str],
+        typer.Option(
+            "--negative-prompt",
+            "-n",
+            help="Text describing what to avoid in the generated image",
+        ),
+    ] = None,
+    from_image: Annotated[
+        Optional[str],
+        typer.Option(
+            "--from-image",
+            help="URL of source image for image-to-image generation",
+        ),
+    ] = None,
+    model: Annotated[
+        Optional[str],
+        typer.Option("--model", "-m", help="AI model to use for generation"),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
 ) -> None:
     """
     Generate an image from a text prompt.
@@ -223,42 +237,54 @@ def generate_image_command(
 
 @video_app.command("generate")
 def generate_video_command(
-    prompt: str = typer.Argument(..., help="Text prompt for video generation"),
-    output_filename: Optional[str] = typer.Option(
-        None,
-        "--filename",
-        "-f",
-        help="Custom filename for the generated video (without extension)",
-    ),
-    seed: Optional[int] = typer.Option(
-        None,
-        "--seed",
-        "-s",
-        help="Random seed for reproducible generation (-1 for random)",
-    ),
-    aspect_ratio: Optional[str] = typer.Option(
-        "16:9",
-        "--aspect-ratio",
-        "-a",
-        help="Aspect ratio for the video (1:1, 16:9, 9:16, 4:3, 3:4)",
-    ),
-    negative_prompt: Optional[str] = typer.Option(
-        None,
-        "--negative-prompt",
-        "-n",
-        help="Text describing what to avoid in the generated video",
-    ),
-    from_image: Optional[str] = typer.Option(
-        None,
-        "--from-image",
-        help="URL or local path of source image for image-to-video generation",
-    ),
-    model: Optional[str] = typer.Option(
-        None, "--model", "-m", help="AI model to use for video generation"
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    prompt: Annotated[str, typer.Argument(help="Text prompt for video generation")],
+    output_filename: Annotated[
+        Optional[str],
+        typer.Option(
+            "--filename",
+            "-f",
+            help="Custom filename for the generated video (without extension)",
+        ),
+    ] = None,
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            "--seed",
+            "-s",
+            help="Random seed for reproducible generation (-1 for random)",
+        ),
+    ] = None,
+    aspect_ratio: Annotated[
+        Optional[str],
+        typer.Option(
+            "--aspect-ratio",
+            "-a",
+            help="Aspect ratio for the video (1:1, 16:9, 9:16, 4:3, 3:4)",
+        ),
+    ] = "16:9",
+    negative_prompt: Annotated[
+        Optional[str],
+        typer.Option(
+            "--negative-prompt",
+            "-n",
+            help="Text describing what to avoid in the generated video",
+        ),
+    ] = None,
+    from_image: Annotated[
+        Optional[str],
+        typer.Option(
+            "--from-image",
+            help="URL or local path of source image for image-to-video generation",
+        ),
+    ] = None,
+    model: Annotated[
+        Optional[str],
+        typer.Option("--model", "-m", help="AI model to use for video generation"),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
 ) -> None:
     """
     Generate a video from a text prompt.
@@ -442,9 +468,10 @@ def version_command() -> None:
 
 @app.command("config")
 def config_command(
-    show_path: bool = typer.Option(
-        False, "--show-path", help="Show the configuration file path"
-    ),
+    show_path: Annotated[
+        bool,
+        typer.Option("--show-path", help="Show the configuration file path"),
+    ] = False,
 ) -> None:
     """Display current configuration."""
 
@@ -511,32 +538,46 @@ def run_batch_command(
             help="Directory for storing results, logs, and state",
         ),
     ],
-    concurrency: int = typer.Option(
-        10,
-        "--concurrency",
-        "-c",
-        help="Maximum parallel requests (1-50)",
-        min=1,
-        max=50,
-    ),
-    rate_limit: int = typer.Option(
-        60, "--rate-limit", "-r", help="Maximum requests per minute", min=1, max=300
-    ),
-    resume: bool = typer.Option(
-        False, "--resume/--no-resume", help="Resume from checkpoint in output dir"
-    ),
-    format_hint: Optional[str] = typer.Option(
-        None,
-        "--format",
-        "-f",
-        help="Input format (csv, jsonl, or auto-detect if not specified)",
-    ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Validate input and show plan without execution"
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    concurrency: Annotated[
+        int,
+        typer.Option(
+            "--concurrency",
+            "-c",
+            help="Maximum parallel requests (1-50)",
+            min=1,
+            max=50,
+        ),
+    ] = 10,
+    rate_limit: Annotated[
+        int,
+        typer.Option(
+            "--rate-limit", "-r", help="Maximum requests per minute", min=1, max=300
+        ),
+    ] = 60,
+    resume: Annotated[
+        bool,
+        typer.Option(
+            "--resume/--no-resume", help="Resume from checkpoint in output dir"
+        ),
+    ] = False,
+    format_hint: Annotated[
+        Optional[str],
+        typer.Option(
+            "--format",
+            "-f",
+            help="Input format (csv, jsonl, or auto-detect if not specified)",
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Validate input and show plan without execution"
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
 ) -> None:
     """
     Process a batch of generation requests from a CSV or JSONL file.
