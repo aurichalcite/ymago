@@ -82,7 +82,8 @@ class TestBatchResilience:
                     resume=True,
                 )
 
-                # Should process only req4 and req5 (req1 and req3 were successful, req2 failed)
+                # Should process only req4 and req5
+                # (req1 and req3 were successful, req2 failed)
                 assert summary.total_requests == 5
                 assert summary.successful == 2  # req4 and req5 newly processed
                 assert summary.failed == 0  # No new failures
@@ -107,14 +108,16 @@ class TestBatchResilience:
             # Create checkpoint file with mixed valid and invalid JSON
             with open(state_file, "w") as f:
                 f.write(
-                    '{"request_id": "req1", "status": "success", "output_path": "/path1"}\n'
+                    '{"request_id": "req1", "status": "success", '
+                    '"output_path": "/path1"}\n'
                 )
                 f.write("invalid json line that should be skipped\n")
                 f.write(
                     '{"request_id": "req2", "status": "success"}\n'
                 )  # Missing output_path
                 f.write(
-                    '{"request_id": "req3", "status": "success", "output_path": "/path3"}\n'
+                    '{"request_id": "req3", "status": "success", '
+                    '"output_path": "/path3"}\n'
                 )
 
             async def request_generator():
@@ -261,7 +264,7 @@ class TestBatchResilience:
         request_times = []
 
         # Make 5 requests rapidly
-        for i in range(5):
+        for _ in range(5):
             await limiter.acquire()
             request_times.append(time.time() - start_time)
 

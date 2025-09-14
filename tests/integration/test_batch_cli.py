@@ -5,6 +5,7 @@ This module tests the complete batch processing workflow through the CLI
 interface, including argument validation and end-to-end processing.
 """
 
+import json
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -39,10 +40,16 @@ class TestBatchCLI:
     @pytest.fixture
     def sample_jsonl_file(self):
         """Create a sample JSONL file for testing."""
-        jsonl_content = """{"prompt": "A beautiful sunset", "output_filename": "sunset", "seed": 42}
-{"prompt": "A mountain landscape", "output_filename": "mountain", "seed": 123}
-{"prompt": "A forest scene", "output_filename": "forest", "seed": 456}
-"""
+        jsonl_lines = [
+            {"prompt": "A beautiful sunset", "output_filename": "sunset", "seed": 42},
+            {
+                "prompt": "A mountain landscape",
+                "output_filename": "mountain",
+                "seed": 123,
+            },
+            {"prompt": "A forest scene", "output_filename": "forest", "seed": 456},
+        ]
+        jsonl_content = "\n".join(json.dumps(line) for line in jsonl_lines)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write(jsonl_content)
             return Path(f.name)
@@ -234,7 +241,7 @@ class TestBatchCLI:
                         call_args = mock_backend.process_batch.call_args
                         assert call_args.kwargs["concurrency"] == 5
                         assert call_args.kwargs["rate_limit"] == 120
-                        assert call_args.kwargs["resume"] == False
+                        assert not call_args.kwargs["resume"]
             finally:
                 sample_csv_file.unlink()
 
@@ -280,7 +287,7 @@ class TestBatchCLI:
 
                         # Verify resume was passed correctly
                         call_args = mock_backend.process_batch.call_args
-                        assert call_args.kwargs["resume"] == True
+                        assert call_args.kwargs["resume"]
             finally:
                 sample_csv_file.unlink()
 
