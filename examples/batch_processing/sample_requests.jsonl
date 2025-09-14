@@ -1,0 +1,15 @@
+{"prompt": "A majestic eagle soaring over mountains", "output_filename": "eagle_mountains", "seed": 42, "quality": "high", "aspect_ratio": "16:9"}
+{"prompt": "A steampunk airship floating in clouds", "output_filename": "steampunk_airship", "seed": 123, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "modern, contemporary"}
+{"prompt": "A magical forest with glowing mushrooms", "output_filename": "magical_forest", "seed": 456, "quality": "standard", "aspect_ratio": "4:3", "negative_prompt": "dark, scary"}
+{"prompt": "A cyberpunk street scene at night", "output_filename": "cyberpunk_street", "seed": 789, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "bright, daylight, rural"}
+{"prompt": "A peaceful zen garden with raked sand", "output_filename": "zen_garden", "seed": 101, "quality": "standard", "aspect_ratio": "1:1"}
+{"prompt": "A dragon flying over a medieval village", "output_filename": "dragon_village", "seed": 202, "quality": "high", "aspect_ratio": "16:9", "media_type": "image"}
+{"prompt": "A space station orbiting Earth", "output_filename": "space_station", "seed": 303, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "fantasy, medieval"}
+{"prompt": "A cozy coffee shop on a rainy day", "output_filename": "coffee_shop_rain", "seed": 404, "quality": "standard", "aspect_ratio": "4:3"}
+{"prompt": "A field of lavender in Provence", "output_filename": "lavender_provence", "seed": 505, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "urban, industrial"}
+{"prompt": "A pirate ship sailing on stormy seas", "output_filename": "pirate_ship", "seed": 606, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "calm, peaceful"}
+{"prompt": "A robot working in a futuristic factory", "output_filename": "robot_factory", "seed": 707, "quality": "standard", "aspect_ratio": "16:9"}
+{"prompt": "A fairy tale castle in the clouds", "output_filename": "castle_clouds", "seed": 808, "quality": "high", "aspect_ratio": "9:16", "negative_prompt": "realistic, modern"}
+{"prompt": "A underwater coral reef with tropical fish", "output_filename": "coral_reef", "seed": 909, "quality": "standard", "aspect_ratio": "16:9", "negative_prompt": "polluted, dead"}
+{"prompt": "A Viking longship on a fjord", "output_filename": "viking_longship", "seed": 111, "quality": "high", "aspect_ratio": "16:9", "negative_prompt": "modern, contemporary"}
+{"prompt": "A neon-lit arcade from the 1980s", "output_filename": "retro_arcade", "seed": 222, "quality": "standard", "aspect_ratio": "4:3", "negative_prompt": "modern, minimalist"}

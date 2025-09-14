@@ -9,14 +9,34 @@ to support distributed execution, cloud functions, etc.
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Callable, List, Set
 
-from ..models import GenerationJob, GenerationResult
+import aiofiles
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from ..models import (
+    BatchResult,
+    BatchSummary,
+    GenerationJob,
+    GenerationRequest,
+    GenerationResult,
+)
 
 if TYPE_CHECKING:
     from ..config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionBackend(ABC):
@@ -42,6 +62,34 @@ class ExecutionBackend(ABC):
         Raises:
             ExecutionError: For execution-specific errors
             ValueError: For invalid job parameters
+        """
+        pass
+
+    @abstractmethod
+    async def process_batch(
+        self,
+        requests: AsyncGenerator[GenerationRequest, None],
+        output_dir: Path,
+        concurrency: int,
+        rate_limit: int,
+        resume: bool = False,
+    ) -> BatchSummary:
+        """
+        Process a batch of generation requests with resilient execution.
+
+        Args:
+            requests: Async generator of generation requests
+            output_dir: Directory for output files and state management
+            concurrency: Maximum number of concurrent requests
+            rate_limit: Maximum requests per minute
+            resume: Whether to resume from existing checkpoint
+
+        Returns:
+            BatchSummary: Complete summary of batch processing results
+
+        Raises:
+            ExecutionError: For execution-specific errors
+            ValueError: For invalid parameters
         """
         pass
 
@@ -160,9 +208,8 @@ class LocalExecutionBackend(ExecutionBackend):
             try:
                 result = await process_func(job, config)
 
-                # Only add metadata if result is a GenerationResult
-                if isinstance(result, GenerationResult):
-                    # Add execution metadata
+                # Add execution metadata only if result is a GenerationResult
+                if hasattr(result, "generation_time_seconds"):
                     execution_time = time.time() - start_time
                     result.generation_time_seconds = execution_time
                     result.add_metadata("execution_backend", "local")
@@ -183,3 +230,255 @@ class LocalExecutionBackend(ExecutionBackend):
             "total_jobs_executed": self._total_jobs_executed,
             "available_slots": self.max_concurrent_jobs - self._active_jobs,
         }
+
+    async def process_batch(
+        self,
+        requests: AsyncGenerator[GenerationRequest, None],
+        output_dir: Path,
+        concurrency: int,
+        rate_limit: int,
+        resume: bool = False,
+    ) -> BatchSummary:
+        """
+        Process a batch of generation requests with resilient execution.
+
+        This implementation provides:
+        - Controlled concurrency using semaphores
+        - Rate limiting with token bucket algorithm
+        - Atomic checkpointing for resume capability
+        - Comprehensive error handling and retry logic
+        - Progress tracking and detailed logging
+
+        Args:
+            requests: Async generator of generation requests
+            output_dir: Directory for output files and state management
+            concurrency: Maximum number of concurrent requests
+            rate_limit: Maximum requests per minute
+            resume: Whether to resume from existing checkpoint
+
+        Returns:
+            BatchSummary: Complete summary of batch processing results
+        """
+        start_time = time.time()
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize state management
+        state_file = output_dir / "_batch_state.jsonl"
+        completed_requests: Set[str] = set()
+
+        # Load existing state if resuming
+        if resume and state_file.exists():
+            completed_requests = await self._load_checkpoint(state_file)
+            logger.info(
+                f"Resuming batch: {len(completed_requests)} requests already completed"
+            )
+
+        # Initialize counters and rate limiter
+        total_requests = 0
+        successful = 0
+        failed = 0
+        skipped = 0
+
+        rate_limiter = TokenBucketRateLimiter(rate_limit)
+        semaphore = asyncio.Semaphore(concurrency)
+
+        # Process requests concurrently
+        async def process_single_request(request: GenerationRequest) -> BatchResult:
+            """Process a single request with rate limiting and error handling."""
+            nonlocal successful, failed, skipped
+
+            # Skip if already completed (resume scenario)
+            if request.id in completed_requests:
+                skipped += 1
+                return BatchResult(
+                    request_id=request.id,
+                    status="skipped",
+                    timestamp=str(time.time()),
+                )
+
+            # Apply rate limiting
+            await rate_limiter.acquire()
+
+            async with semaphore:
+                return await self._process_request_with_retry(
+                    request, output_dir, state_file
+                )
+
+        # Collect all requests and process them
+        request_list = []
+        async for request in requests:
+            total_requests += 1
+            request_list.append(request)
+
+        # Process requests concurrently
+        tasks = [process_single_request(req) for req in request_list]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Count results and handle exceptions
+        for result in results:
+            if isinstance(result, Exception):
+                failed += 1
+                logger.error(f"Unexpected error in batch processing: {result}")
+            elif isinstance(result, BatchResult):
+                if result.status == "success":
+                    successful += 1
+                elif result.status == "failure":
+                    failed += 1
+                elif result.status == "skipped":
+                    pass  # Already counted above
+
+        # Calculate final statistics
+        end_time = time.time()
+        processing_time = end_time - start_time
+        throughput = (
+            (total_requests / processing_time * 60) if processing_time > 0 else 0
+        )
+
+        # Create summary
+        summary = BatchSummary(
+            total_requests=total_requests,
+            successful=successful,
+            failed=failed,
+            skipped=skipped,
+            processing_time_seconds=processing_time,
+            results_log_path=str(state_file),
+            throughput_requests_per_minute=throughput,
+            start_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(start_time)),
+            end_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(end_time)),
+        )
+
+        logger.info(
+            f"Batch processing completed: {successful}/{total_requests} successful"
+        )
+        return summary
+
+    async def _load_checkpoint(self, state_file: Path) -> Set[str]:
+        """Load completed request IDs from checkpoint file."""
+        completed_requests: Set[str] = set()
+
+        try:
+            async with aiofiles.open(state_file, "r") as f:
+                async for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            result = json.loads(line)
+                            if result.get("status") == "success":
+                                completed_requests.add(result["request_id"])
+                        except json.JSONDecodeError:
+                            logger.warning(f"Invalid JSON in state file: {line}")
+        except FileNotFoundError:
+            pass  # No checkpoint file exists yet
+        except Exception as e:
+            logger.error(f"Error loading checkpoint: {e}")
+
+        return completed_requests
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=8),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def _process_request_with_retry(
+        self, request: GenerationRequest, output_dir: Path, state_file: Path
+    ) -> BatchResult:
+        """Process a single request with retry logic and atomic checkpointing."""
+        start_time = time.time()
+
+        try:
+            # Import here to avoid circular imports
+            from ..config import load_config
+            from ..core.generation import process_generation_job
+
+            # Convert to GenerationJob and process
+            job = request.to_generation_job()
+            config = await load_config()
+
+            result = await process_generation_job(job, config)
+
+            # Create batch result
+            processing_time = time.time() - start_time
+            batch_result = BatchResult(
+                request_id=request.id,
+                status="success",
+                output_path=str(result.local_path),
+                processing_time_seconds=processing_time,
+                file_size_bytes=result.file_size_bytes,
+                metadata=result.metadata,
+            )
+
+            # Atomically write to checkpoint
+            await self._write_checkpoint(state_file, batch_result)
+
+            return batch_result
+
+        except Exception as e:
+            processing_time = time.time() - start_time
+            error_msg = str(e)
+
+            logger.error(f"Request {request.id} failed: {error_msg}")
+
+            batch_result = BatchResult(
+                request_id=request.id,
+                status="failure",
+                error_message=error_msg,
+                processing_time_seconds=processing_time,
+            )
+
+            # Write failure to checkpoint
+            await self._write_checkpoint(state_file, batch_result)
+
+            return batch_result
+
+    async def _write_checkpoint(self, state_file: Path, result: BatchResult) -> None:
+        """Atomically write a batch result to the checkpoint file."""
+        try:
+            # Use a lock to prevent concurrent writes
+            if not hasattr(self, "_checkpoint_lock"):
+                self._checkpoint_lock = asyncio.Lock()
+
+            async with self._checkpoint_lock:
+                # Simply append to the file - aiofiles handles atomic writes
+                async with aiofiles.open(state_file, "a") as f:
+                    result_json = result.model_dump_json()
+                    await f.write(f"{result_json}\n")
+                    await f.flush()
+
+        except Exception as e:
+            logger.error(f"Failed to write checkpoint: {e}")
+
+
+class TokenBucketRateLimiter:
+    """Token bucket rate limiter for controlling request rate."""
+
+    def __init__(self, requests_per_minute: int):
+        self.requests_per_minute = requests_per_minute
+        self.tokens_per_second = requests_per_minute / 60.0
+        self.bucket_size: float = float(
+            max(1, requests_per_minute // 10)
+        )  # Allow small bursts
+        self.tokens: float = self.bucket_size
+        self.last_update = time.time()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        """Acquire a token, waiting if necessary."""
+        async with self._lock:
+            now = time.time()
+
+            # Add tokens based on elapsed time
+            elapsed = now - self.last_update
+            self.tokens = min(
+                self.bucket_size, self.tokens + elapsed * self.tokens_per_second
+            )
+            self.last_update = now
+
+            # Wait if no tokens available
+            if self.tokens < 1:
+                wait_time = (1 - self.tokens) / self.tokens_per_second
+                await asyncio.sleep(wait_time)
+                self.tokens = 0
+            else:
+                self.tokens -= 1

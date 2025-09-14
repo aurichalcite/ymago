@@ -5,6 +5,7 @@ This module coordinates the entire image generation process, from API calls
 to file storage, with comprehensive error handling and cleanup.
 """
 
+import logging
 import tempfile
 import time
 import uuid
@@ -25,6 +26,8 @@ from ..core.io_utils import (
 )
 from ..core.storage import LocalStorageUploader
 from ..models import GenerationJob, GenerationResult
+
+logger = logging.getLogger(__name__)
 
 
 class GenerationError(Exception):
@@ -146,9 +149,6 @@ async def process_generation_job(
                 await write_metadata(metadata, metadata_path)
             except Exception as e:
                 # Log warning but don't fail the generation
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to write metadata: {e}")
 
         # Step 9: Create and populate result

@@ -16,7 +16,13 @@ from ._version import __version__
 
 # Essential package-level exports for public API
 from .config import Settings, load_config
-from .models import GenerationJob, GenerationResult
+from .models import (
+    BatchResult,
+    BatchSummary,
+    GenerationJob,
+    GenerationRequest,
+    GenerationResult,
+)
 
 # Use runtime check instead of assert to work in optimized mode
 if not pydantic.VERSION.startswith("2."):
@@ -31,8 +37,11 @@ if not pydantic.VERSION.startswith("2."):
 
 __all__ = [
     "__version__",
+    "BatchResult",
+    "BatchSummary",
+    "GenerationJob",
+    "GenerationRequest",
+    "GenerationResult",
     "Settings",
     "load_config",
-    "GenerationJob",
-    "GenerationResult",
 ]

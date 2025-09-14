@@ -8,21 +8,31 @@ for progress indication and user feedback.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.status import Status
 from rich.table import Table
 
 from .config import load_config
+from .core.backends import LocalExecutionBackend
+from .core.batch_parser import parse_batch_input
 from .core.generation import process_generation_job
-from .models import GenerationJob, GenerationResult
+from .models import BatchSummary, GenerationJob, GenerationResult
 
 # Create the main Typer application
 app = typer.Typer(
     name="ymago",
-    help="An advanced, asynchronous command-line toolkit for generative AI media.",
+    help="An advanced, async command-line toolkit for generative AI media.",
     no_args_is_help=True,
 )
 
@@ -40,9 +50,17 @@ video_app = typer.Typer(
     no_args_is_help=True,
 )
 
+# Create a sub-application for batch commands
+batch_app = typer.Typer(
+    name="batch",
+    help="Batch processing commands",
+    no_args_is_help=True,
+)
+
 # Add the sub-applications to the main app
 app.add_typer(image_app, name="image")
 app.add_typer(video_app, name="video")
+app.add_typer(batch_app, name="batch")
 
 # Create console for rich output
 console = Console()
@@ -78,62 +96,76 @@ def _validate_seed(seed: int) -> bool:
 
 @image_app.command("generate")
 def generate_image_command(
-    prompt: str = typer.Argument(..., help="Text prompt for image generation"),
-    output_filename: Optional[str] = typer.Option(
-        None,
-        "--filename",
-        "-f",
-        help="Custom filename for the generated image (without extension)",
-    ),
-    seed: Optional[int] = typer.Option(
-        None,
-        "--seed",
-        "-s",
-        help="Random seed for reproducible generation (-1 for random)",
-    ),
-    quality: Optional[str] = typer.Option(
-        "standard",
-        "--quality",
-        "-q",
-        help="Image quality setting (draft, standard, high)",
-    ),
-    aspect_ratio: Optional[str] = typer.Option(
-        "1:1",
-        "--aspect-ratio",
-        "-a",
-        help="Aspect ratio for the image (1:1, 16:9, 9:16, 4:3, 3:4)",
-    ),
-    negative_prompt: Optional[str] = typer.Option(
-        None,
-        "--negative-prompt",
-        "-n",
-        help="Text describing what to avoid in the generated image",
-    ),
-    from_image: Optional[str] = typer.Option(
-        None,
-        "--from-image",
-        help="URL of source image for image-to-image generation",
-    ),
-    model: Optional[str] = typer.Option(
-        None, "--model", "-m", help="AI model to use for generation"
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    prompt: Annotated[str, typer.Argument(help="Text prompt for image generation")],
+    output_filename: Annotated[
+        Optional[str],
+        typer.Option(
+            "--filename",
+            "-f",
+            help="Custom filename for the generated image (without extension)",
+        ),
+    ] = None,
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            "--seed",
+            "-s",
+            help="Random seed for reproducible generation (-1 for random)",
+        ),
+    ] = None,
+    quality: Annotated[
+        Optional[str],
+        typer.Option(
+            "--quality",
+            "-q",
+            help="Image quality setting (draft, standard, high)",
+        ),
+    ] = "standard",
+    aspect_ratio: Annotated[
+        Optional[str],
+        typer.Option(
+            "--aspect-ratio",
+            "-a",
+            help="Aspect ratio for the image (1:1, 16:9, 9:16, 4:3, 3:4)",
+        ),
+    ] = "1:1",
+    negative_prompt: Annotated[
+        Optional[str],
+        typer.Option(
+            "--negative-prompt",
+            "-n",
+            help="Text describing what to avoid in the generated image",
+        ),
+    ] = None,
+    from_image: Annotated[
+        Optional[str],
+        typer.Option(
+            "--from-image",
+            help="URL of source image for image-to-image generation",
+        ),
+    ] = None,
+    model: Annotated[
+        Optional[str],
+        typer.Option("--model", "-m", help="AI model to use for generation"),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
 ) -> None:
     """
     Generate an image from a text prompt.
 
     This command generates an image using Google's Generative AI and saves it
-    to the configured output directory. Supports advanced features like negative
-    prompts and image-to-image generation.
+    to the configured output directory. It supports advanced features like
+    negative prompts and image-to-image generation.
 
     Examples:
         ymago image generate "A beautiful sunset over mountains"
-        ymago image generate "A cat wearing a hat" --filename "cat_hat" --seed 42
-        ymago image generate "Abstract art" --quality high --aspect-ratio 16:9
-        ymago image generate "A forest scene" --negative-prompt "buildings, cars"
-        ymago image generate "Transform this image" --from-image "https://example.com/image.jpg"
+        ymago image generate "A cat wearing a hat" --filename "cat_hat" -s 42
+        ymago image generate "Abstract art" -q high -a 16:9
+        ymago image generate "A forest scene" -n "buildings, cars"
+        ymago image generate "Transform this image" --from-image "https://.../image.jpg"
     """
 
     async def _async_generate() -> None:
@@ -205,55 +237,67 @@ def generate_image_command(
 
 @video_app.command("generate")
 def generate_video_command(
-    prompt: str = typer.Argument(..., help="Text prompt for video generation"),
-    output_filename: Optional[str] = typer.Option(
-        None,
-        "--filename",
-        "-f",
-        help="Custom filename for the generated video (without extension)",
-    ),
-    seed: Optional[int] = typer.Option(
-        None,
-        "--seed",
-        "-s",
-        help="Random seed for reproducible generation (-1 for random)",
-    ),
-    aspect_ratio: Optional[str] = typer.Option(
-        "16:9",
-        "--aspect-ratio",
-        "-a",
-        help="Aspect ratio for the video (1:1, 16:9, 9:16, 4:3, 3:4)",
-    ),
-    negative_prompt: Optional[str] = typer.Option(
-        None,
-        "--negative-prompt",
-        "-n",
-        help="Text describing what to avoid in the generated video",
-    ),
-    from_image: Optional[str] = typer.Option(
-        None,
-        "--from-image",
-        help="URL or local path of source image for image-to-video generation",
-    ),
-    model: Optional[str] = typer.Option(
-        None, "--model", "-m", help="AI model to use for video generation"
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    prompt: Annotated[str, typer.Argument(help="Text prompt for video generation")],
+    output_filename: Annotated[
+        Optional[str],
+        typer.Option(
+            "--filename",
+            "-f",
+            help="Custom filename for the generated video (without extension)",
+        ),
+    ] = None,
+    seed: Annotated[
+        Optional[int],
+        typer.Option(
+            "--seed",
+            "-s",
+            help="Random seed for reproducible generation (-1 for random)",
+        ),
+    ] = None,
+    aspect_ratio: Annotated[
+        Optional[str],
+        typer.Option(
+            "--aspect-ratio",
+            "-a",
+            help="Aspect ratio for the video (1:1, 16:9, 9:16, 4:3, 3:4)",
+        ),
+    ] = "16:9",
+    negative_prompt: Annotated[
+        Optional[str],
+        typer.Option(
+            "--negative-prompt",
+            "-n",
+            help="Text describing what to avoid in the generated video",
+        ),
+    ] = None,
+    from_image: Annotated[
+        Optional[str],
+        typer.Option(
+            "--from-image",
+            help="URL or local path of source image for image-to-video generation",
+        ),
+    ] = None,
+    model: Annotated[
+        Optional[str],
+        typer.Option("--model", "-m", help="AI model to use for video generation"),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
 ) -> None:
     """
     Generate a video from a text prompt.
 
     This command generates a video using Google's Veo model and saves it
-    to the configured output directory. Supports advanced features like negative
-    prompts and image-to-video generation.
+    to the configured output directory. It supports advanced features like
+    negative prompts and image-to-video generation.
 
     Examples:
         ymago video generate "A cat playing in a garden"
-        ymago video generate "Ocean waves" --filename "waves" --seed 42
-        ymago video generate "Dancing" --aspect-ratio 9:16 --negative-prompt "static"
-        ymago video generate "Animate this image" --from-image "https://example.com/image.jpg"
+        ymago video generate "Ocean waves" --filename "waves" -s 42
+        ymago video generate "Dancing" -a 9:16 -n "static"
+        ymago video generate "Animate this image" --from-image "https://.../image.jpg"
     """
 
     async def _async_generate_video() -> None:
@@ -424,9 +468,10 @@ def version_command() -> None:
 
 @app.command("config")
 def config_command(
-    show_path: bool = typer.Option(
-        False, "--show-path", help="Show the configuration file path"
-    ),
+    show_path: Annotated[
+        bool,
+        typer.Option("--show-path", help="Show the configuration file path"),
+    ] = False,
 ) -> None:
     """Display current configuration."""
 
@@ -476,6 +521,256 @@ def config_command(
 
     # Run the async function
     asyncio.run(_async_config())
+
+
+@batch_app.command("run")
+def run_batch_command(
+    input_file: Annotated[
+        Path,
+        typer.Argument(..., help="Path to CSV or JSONL file with generation requests"),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output-dir",
+            "-o",
+            help="Directory for storing results, logs, and state",
+        ),
+    ],
+    concurrency: Annotated[
+        int,
+        typer.Option(
+            "--concurrency",
+            "-c",
+            help="Maximum parallel requests (1-50)",
+            min=1,
+            max=50,
+        ),
+    ] = 10,
+    rate_limit: Annotated[
+        int,
+        typer.Option(
+            "--rate-limit", "-r", help="Maximum requests per minute", min=1, max=300
+        ),
+    ] = 60,
+    resume: Annotated[
+        bool,
+        typer.Option(
+            "--resume/--no-resume", help="Resume from checkpoint in output dir"
+        ),
+    ] = False,
+    format_hint: Annotated[
+        Optional[str],
+        typer.Option(
+            "--format",
+            "-f",
+            help="Input format (csv, jsonl, or auto-detect if not specified)",
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Validate input and show plan without execution"
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output"),
+    ] = False,
+) -> None:
+    """
+    Process a batch of generation requests from a CSV or JSONL file.
+
+    This command processes multiple generation requests concurrently with
+    resilient execution, rate limiting, and checkpoint-based resumption.
+
+    Examples:
+        ymago batch run prompts.csv -o ./results/
+        ymago batch run reqs.jsonl -o ./out/ -c 20
+        ymago batch run data.csv -o ./res/ --resume -r 120
+        ymago batch run prompts.csv -o ./test/ --dry-run
+    """
+    asyncio.run(
+        _async_run_batch(
+            input_file=input_file,
+            output_dir=output_dir,
+            concurrency=concurrency,
+            rate_limit=rate_limit,
+            resume=resume,
+            format_hint=format_hint,
+            dry_run=dry_run,
+            verbose=verbose,
+        )
+    )
+
+
+async def _async_run_batch(
+    input_file: Path,
+    output_dir: Path,
+    concurrency: int,
+    rate_limit: int,
+    resume: bool,
+    format_hint: Optional[str],
+    dry_run: bool,
+    verbose: bool,
+) -> None:
+    """Async implementation of batch processing command."""
+    try:
+        # Validate input file exists
+        if not input_file.exists():
+            console.print(f"[red]Error: Input file not found: {input_file}[/red]")
+            sys.exit(1)
+
+        # Validate output directory is writable
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            test_file = output_dir / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+        except Exception as e:
+            console.print(
+                f"[red]Error: Cannot write to output directory {output_dir}: {e}[/red]"
+            )
+            sys.exit(1)
+
+        # Load configuration
+        with Status("Loading configuration...", console=console):
+            await load_config()
+
+        if verbose:
+            console.print("✓ Configuration loaded")
+            console.print(f"✓ Input file: {input_file}")
+            console.print(f"✓ Output directory: {output_dir}")
+            console.print(f"✓ Concurrency: {concurrency}")
+            console.print(f"✓ Rate limit: {rate_limit} requests/minute")
+
+        # Parse and validate input
+        console.print("\n[bold blue]Parsing input file...[/bold blue]")
+
+        request_count = 0
+
+        # Count requests and validate (for dry run and progress tracking)
+        async for request in parse_batch_input(input_file, output_dir, format_hint):
+            request_count += 1
+            if dry_run and request_count <= 5:  # Show first 5 requests in dry run
+                console.print(f"  Request {request_count}: {request.prompt[:50]}...")
+
+        if request_count == 0:
+            console.print("[yellow]No valid requests found in input file[/yellow]")
+            sys.exit(0)
+
+        console.print(f"✓ Found {request_count} valid requests")
+
+        # Check for rejected rows file
+        rejected_file = output_dir / f"{input_file.stem}.rejected.csv"
+        if rejected_file.exists():
+            console.print(
+                f"[yellow]⚠ Rejected rows file exists: {rejected_file}[/yellow]"
+            )
+
+        if dry_run:
+            console.print("\n[green]Dry run completed successfully![/green]")
+            console.print(f"Would process {request_count} requests with:")
+            console.print(f"  • Concurrency: {concurrency}")
+            console.print(f"  • Rate limit: {rate_limit} requests/minute")
+            estimated_time = _estimate_processing_time(request_count, rate_limit)
+            console.print(f"  • Estimated time: {estimated_time}")
+            return
+
+        # Initialize backend and start processing
+        backend = LocalExecutionBackend(max_concurrent_jobs=concurrency)
+
+        console.print("\n[bold green]Starting batch processing...[/bold green]")
+
+        # Create progress display
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            # Add progress task
+            task = progress.add_task(
+                f"Processing {request_count} requests...", total=request_count
+            )
+
+            # Process batch
+
+            # Re-parse requests for processing
+            requests_generator = parse_batch_input(input_file, output_dir, format_hint)
+
+            summary = await backend.process_batch(
+                requests=requests_generator,
+                output_dir=output_dir,
+                concurrency=concurrency,
+                rate_limit=rate_limit,
+                resume=resume,
+            )
+
+            progress.update(task, completed=request_count)
+
+        # Display results
+        _display_batch_summary(summary, verbose)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Batch processing cancelled by user[/yellow]")
+        console.print("Progress has been saved. Use --resume to continue.")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        sys.exit(1)
+
+
+def _estimate_processing_time(request_count: int, rate_limit: int) -> str:
+    """Estimate processing time based on rate limit."""
+    minutes = request_count / rate_limit
+    if minutes < 1:
+        return f"{int(minutes * 60)} seconds"
+    elif minutes < 60:
+        return f"{minutes:.1f} minutes"
+    else:
+        hours = minutes / 60
+        return f"{hours:.1f} hours"
+
+
+def _display_batch_summary(summary: BatchSummary, verbose: bool) -> None:
+    """Display batch processing summary with rich formatting."""
+    console.print("\n[bold green]Batch Processing Complete![/bold green]")
+
+    # Create summary table
+    table = Table(
+        title="Batch Processing Summary", show_header=True, header_style="bold magenta"
+    )
+    table.add_column("Metric", style="cyan", no_wrap=True)
+    table.add_column("Value", style="white")
+
+    table.add_row("Total Requests", str(summary.total_requests))
+    table.add_row("Successful", f"[green]{summary.successful}[/green]")
+    table.add_row("Failed", f"[red]{summary.failed}[/red]")
+    table.add_row("Skipped", f"[yellow]{summary.skipped}[/yellow]")
+    table.add_row("Success Rate", f"{summary.success_rate:.1f}%")
+    table.add_row("Processing Time", f"{summary.processing_time_seconds:.1f} seconds")
+    table.add_row("Throughput", f"{summary.throughput_requests_per_minute:.1f} req/min")
+
+    console.print(table)
+
+    # Show file locations
+    console.print("\n[bold]Output Files:[/bold]")
+    console.print(f"  • Results log: {summary.results_log_path}")
+    if summary.rejected_rows_path:
+        console.print(f"  • Rejected rows: {summary.rejected_rows_path}")
+
+    if verbose and summary.failed > 0:
+        console.print(
+            "\n[yellow]Check the results log for detailed error information[/yellow]"
+        )
 
 
 def main() -> None:

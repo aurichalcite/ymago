@@ -175,6 +175,7 @@ class TestProcessGenerationJob:
             assert result.local_path == Path(final_path)
             assert result.job == sample_generation_job
             assert result.file_size_bytes == len(sample_image_bytes)
+            assert result.generation_time_seconds is not None
             assert 0 <= result.generation_time_seconds <= (end_time - start_time)
 
             # Verify metadata
