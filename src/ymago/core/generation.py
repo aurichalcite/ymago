@@ -130,38 +130,32 @@ async def process_generation_job(
             storage_kwargs = {}
 
             # Add cloud storage credentials based on URL scheme
+            cs_config = config.cloud_storage
             if destination_url.startswith("s3://"):
-                storage_kwargs.update(
-                    {
-                        "aws_access_key_id": config.cloud_storage.aws_access_key_id,
-                        "aws_secret_access_key": config.cloud_storage.aws_secret_access_key,
-                        "aws_region": config.cloud_storage.aws_region,
-                    }
-                )
+                storage_kwargs["aws_access_key_id"] = cs_config.aws_access_key_id
+                storage_kwargs[
+                    "aws_secret_access_key"
+                ] = cs_config.aws_secret_access_key
+                storage_kwargs["aws_region"] = cs_config.aws_region
             elif destination_url.startswith("gs://"):
-                storage_kwargs.update(
-                    {
-                        "service_account_path": config.cloud_storage.gcp_service_account_path,
-                    }
-                )
+                storage_kwargs[
+                    "service_account_path"
+                ] = cs_config.gcp_service_account_path
             elif destination_url.startswith("r2://"):
                 if not all(
                     [
-                        config.cloud_storage.r2_account_id,
-                        config.cloud_storage.r2_access_key_id,
-                        config.cloud_storage.r2_secret_access_key,
+                        cs_config.r2_account_id,
+                        cs_config.r2_access_key_id,
+                        cs_config.r2_secret_access_key,
                     ]
                 ):
                     raise StorageError(
-                        "R2 storage requires account_id, access_key_id, and secret_access_key"
+                        "R2 storage requires account_id, access_key_id, "
+                        "and secret_access_key"
                     )
-                storage_kwargs.update(
-                    {
-                        "r2_account_id": config.cloud_storage.r2_account_id,
-                        "r2_access_key_id": config.cloud_storage.r2_access_key_id,
-                        "r2_secret_access_key": config.cloud_storage.r2_secret_access_key,
-                    }
-                )
+                storage_kwargs["r2_account_id"] = cs_config.r2_account_id
+                storage_kwargs["r2_access_key_id"] = cs_config.r2_access_key_id
+                storage_kwargs["r2_secret_access_key"] = cs_config.r2_secret_access_key
 
             storage_uploader = StorageBackendRegistry.create_backend(
                 destination_url, **storage_kwargs

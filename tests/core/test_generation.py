@@ -414,7 +414,7 @@ class TestGenerationWithCloudStorage:
             ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.StorageBackendRegistry") as mock_registry,
-            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.remove"),
             patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
             patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
         ):
@@ -469,7 +469,7 @@ class TestGenerationWithCloudStorage:
             ) as mock_generate,
             patch("ymago.core.generation._create_temp_file") as mock_create_temp,
             patch("ymago.core.generation.StorageBackendRegistry") as mock_registry,
-            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.remove"),
             patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
             patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
         ):
@@ -494,7 +494,7 @@ class TestGenerationWithCloudStorage:
                 "/path/to/service-account.json"
             )
 
-            result = await process_generation_job(
+            await process_generation_job(
                 sample_generation_job,
                 sample_config,
                 destination_url="gs://test-bucket/uploads/",
@@ -555,7 +555,7 @@ class TestGenerationWithWebhooks:
             patch(
                 "ymago.core.generation.NotificationService"
             ) as mock_notification_class,
-            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.remove"),
             patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
             patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
         ):
@@ -587,7 +587,7 @@ class TestGenerationWithWebhooks:
             # Create mock session
             mock_session = AsyncMock()
 
-            result = await process_generation_job(
+            await process_generation_job(
                 sample_generation_job,
                 sample_config,
                 webhook_url="https://webhook.example.com/notify",
@@ -668,7 +668,7 @@ class TestGenerationWithWebhooks:
     async def test_process_generation_job_without_webhook_session(
         self, sample_generation_job, sample_config, sample_image_bytes
     ):
-        """Test generation job with webhook URL but no session (should not send webhook)."""
+        """Test job with webhook URL but no session doesn't send webhook."""
         with (
             patch(
                 "ymago.core.generation.generate_image", new_callable=AsyncMock
@@ -678,7 +678,7 @@ class TestGenerationWithWebhooks:
             patch(
                 "ymago.core.generation.NotificationService"
             ) as mock_notification_class,
-            patch("ymago.core.generation.aiofiles.os.remove") as mock_remove,
+            patch("ymago.core.generation.aiofiles.os.remove"),
             patch("ymago.core.generation.aiofiles.os.path.getsize") as mock_getsize,
             patch("ymago.core.generation.aiofiles.os.path.exists") as mock_exists,
         ):

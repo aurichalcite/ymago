@@ -30,6 +30,7 @@ class TestCLICloudStorageOptions:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.image_model = "gemini-pro"
         mock_config.cloud_storage.aws_access_key_id = "test-key"
         mock_config.cloud_storage.aws_secret_access_key = "test-secret"
         mock_config.cloud_storage.aws_region = "us-east-1"
@@ -70,6 +71,7 @@ class TestCLICloudStorageOptions:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.image_model = "gemini-pro"
         mock_config.webhooks.timeout_seconds = 30
         mock_config.webhooks.retry_attempts = 3
         mock_config.webhooks.retry_backoff_factor = 2.0
@@ -112,6 +114,7 @@ class TestCLICloudStorageOptions:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.video_model = "veo"
         mock_config.cloud_storage.gcp_service_account_path = None
         mock_load_config.return_value = mock_config
 
@@ -175,6 +178,7 @@ class TestCLICloudStorageOptions:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.image_model = "gemini-pro"
         mock_config.cloud_storage.r2_account_id = "test-account"
         mock_config.cloud_storage.r2_access_key_id = "test-key"
         mock_config.cloud_storage.r2_secret_access_key = "test-secret"
@@ -260,6 +264,7 @@ class TestCLIErrorHandling:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.image_model = "gemini-pro"
         mock_load_config.return_value = mock_config
 
         # Mock storage error
@@ -290,6 +295,7 @@ class TestCLIErrorHandling:
         mock_config = MagicMock()
         mock_config.auth.google_api_key = "test-key"
         mock_config.defaults.output_path = Path("/tmp")
+        mock_config.defaults.image_model = "gemini-pro"
         mock_load_config.return_value = mock_config
 
         # Mock import error for missing dependencies

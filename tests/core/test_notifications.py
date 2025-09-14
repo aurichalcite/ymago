@@ -192,7 +192,7 @@ class TestNotificationService:
             file_size_bytes=1024,
         )
 
-        with aioresponses() as mock_responses:
+        with aioresponses():
             # Mock timeout by not adding any response
             pass
 
@@ -289,9 +289,13 @@ class TestNotificationService:
                 requests = mock_responses.requests
                 assert len(requests) == 1
 
-                request = requests[0][1]  # Get the request object
-                assert request.headers.get("Content-Type") == "application/json"
-                assert request.headers.get("User-Agent") == "ymago-webhook/1.0"
+                # Get the first request made to any URL
+                first_request_list = list(requests.values())[0]
+                assert len(first_request_list) == 1
+                request_kwargs = first_request_list[0].kwargs
+
+                assert request_kwargs["headers"]["Content-Type"] == "application/json"
+                assert request_kwargs["headers"]["User-Agent"] == "ymago-webhook/1.0"
 
     @pytest.mark.asyncio
     async def test_webhook_payload_content(self):
@@ -321,8 +325,12 @@ class TestNotificationService:
                 requests = mock_responses.requests
                 assert len(requests) == 1
 
-                request_data = requests[0][1].data
-                assert b"test-content" in request_data
-                assert b"success" in request_data
-                assert b"s3://bucket/file.jpg" in request_data
-                assert b"test-model" in request_data
+                # Get the first request made to any URL
+                first_request_list = list(requests.values())[0]
+                assert len(first_request_list) == 1
+                request_data = first_request_list[0].kwargs.get("data")
+
+                assert "test-content" in request_data
+                assert "success" in request_data
+                assert "s3://bucket/file.jpg" in request_data
+                assert "test-model" in request_data
