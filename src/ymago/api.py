@@ -341,9 +341,7 @@ async def generate_video(
 
         # Download the video file
         video_file = generated_video.video
-        video_bytes = await asyncio.to_thread(
-            client.files.download, file=video_file
-        )
+        video_bytes = await asyncio.to_thread(client.files.download, file=video_file)
 
         if not video_bytes:
             raise InvalidResponseError("Video data is empty")
