@@ -301,7 +301,7 @@ class LocalExecutionBackend(ExecutionBackend):
             await rate_limiter.acquire()
 
             async with semaphore:
-                return await self._process_request_with_retry(  # type: ignore[no-any-return]
+                return await self._process_request_with_retry(
                     request, output_dir, state_file
                 )
 
@@ -375,7 +375,7 @@ class LocalExecutionBackend(ExecutionBackend):
 
         return completed_requests
 
-    @retry(  # type: ignore[misc]
+    @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=8),
         retry=retry_if_exception_type((ConnectionError, TimeoutError)),

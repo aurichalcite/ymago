@@ -189,9 +189,6 @@ async def _parse_jsonl_file(
                 # Parse JSON line
                 row_data = json.loads(line)
 
-                if not isinstance(row_data, dict):
-                    raise ValueError("Each line must be a JSON object")
-
                 # Clean and validate row data
                 cleaned_row = _clean_row_data(row_data)
 

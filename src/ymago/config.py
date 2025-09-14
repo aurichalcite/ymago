@@ -13,14 +13,14 @@ import tomli
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class Auth(BaseModel):  # type: ignore[misc]
+class Auth(BaseModel):
     """Authentication configuration for AI services."""
 
     google_api_key: str = Field(
         ..., description="Google Generative AI API key for image generation"
     )
 
-    @field_validator("google_api_key")  # type: ignore[misc]
+    @field_validator("google_api_key")
     @classmethod
     def validate_api_key(cls, v: str) -> str:
         """Validate that API key is not empty."""
@@ -29,7 +29,7 @@ class Auth(BaseModel):  # type: ignore[misc]
         return v.strip()
 
 
-class Defaults(BaseModel):  # type: ignore[misc]
+class Defaults(BaseModel):
     """Default configuration values for media generation."""
 
     image_model: str = Field(
@@ -52,7 +52,7 @@ class Defaults(BaseModel):  # type: ignore[misc]
         description="Whether to generate metadata sidecar files by default",
     )
 
-    @field_validator("output_path")  # type: ignore[misc]
+    @field_validator("output_path")
     @classmethod
     def validate_output_path(cls, v: Path) -> Path:
         """Ensure output path is absolute and create if needed."""
@@ -60,7 +60,7 @@ class Defaults(BaseModel):  # type: ignore[misc]
         return path
 
 
-class Settings(BaseModel):  # type: ignore[misc]
+class Settings(BaseModel):
     """Top-level configuration combining authentication and defaults."""
 
     auth: Auth
