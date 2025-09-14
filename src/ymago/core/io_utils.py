@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class MetadataModel(BaseModel):
+class MetadataModel(BaseModel):  # type: ignore[misc]
     """
     Pydantic model for generation metadata sidecars.
 
@@ -147,7 +147,7 @@ async def download_image(url: str, timeout: int = 30) -> bytes:
                 logger.info(
                     f"Successfully downloaded image: {len(image_data)} bytes from {url}"
                 )
-                return image_data
+                return image_data  # type: ignore[no-any-return]
 
     except aiohttp.ClientError as e:
         # Handle aiohttp-specific errors
@@ -264,6 +264,6 @@ async def read_image_from_path(path: Path) -> bytes:
     """
     try:
         async with aiofiles.open(path, "rb") as f:
-            return await f.read()
+            return await f.read()  # type: ignore[no-any-return]
     except Exception as e:
         raise FileReadError(f"Failed to read image from path {path}: {e}") from e

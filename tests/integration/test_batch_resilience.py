@@ -147,9 +147,10 @@ class TestBatchResilience:
                     resume=True,
                 )
 
-                # Should skip req1 and req3 (valid successful entries)
-                # req2 has invalid checkpoint entry (missing output_path) so is also skipped
-                # Should process only req4 and req5
+                # Should skip req1 and req3 (valid successful entries).
+                # req2 has an invalid checkpoint entry (missing output_path), so it is
+                # also skipped.
+                # Should process only req4 and req5.
                 assert summary.total_requests == 5
                 assert summary.successful == 2  # req4, req5 newly processed
                 assert summary.skipped == 3  # req1, req2 (invalid), req3 skipped
@@ -163,9 +164,9 @@ class TestBatchResilience:
 
             request = GenerationRequest(id="test_req", prompt="Test prompt")
 
-            # Since _process_request_with_retry imports internally, we mock at a higher level
-            # The current implementation doesn't have built-in retry for network failures
-            # It will fail after the first attempt
+            # _process_request_with_retry imports internally, so we mock at a higher
+            # level. The current implementation lacks built-in retry for network
+            # failures, so it will fail after the first attempt.
             with patch("ymago.config.load_config") as mock_config:
                 with patch(
                     "ymago.core.generation.process_generation_job",
@@ -252,7 +253,7 @@ class TestBatchResilience:
         limiter = TokenBucketRateLimiter(60)
 
         # Consume burst capacity first (bucket_size = 60/10 = 6)
-        for _ in range(limiter.bucket_size):
+        for _ in range(int(limiter.bucket_size)):
             await limiter.acquire()
 
         # Now test rate limiting

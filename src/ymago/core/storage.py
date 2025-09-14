@@ -156,7 +156,7 @@ class LocalStorageUploader(StorageUploader):
     async def exists(self, destination_key: str) -> bool:
         """Check if a file exists in local storage."""
         file_path = self.base_directory / destination_key
-        return await aiofiles.os.path.exists(file_path)
+        return await aiofiles.os.path.exists(file_path)  # type: ignore[no-any-return]
 
     async def delete(self, destination_key: str) -> bool:
         """Delete a file from local storage."""

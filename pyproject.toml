@@ -107,7 +107,17 @@ python_version = "3.11"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["google.*", "tenacity.*"]
+module = [
+    "google.*",
+    "tenacity.*",
+    "tomli.*",
+    "pydantic.*",
+    "aiofiles.*",
+    "aiocsv.*",
+    "aiohttp.*",
+    "typer.*",
+    "rich.*",
+]
 ignore_missing_imports = true
 
 [tool.basedpyright]
