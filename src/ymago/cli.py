@@ -350,9 +350,7 @@ def _display_job_info(job: GenerationJob) -> None:
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="white")
 
-    prompt_display = (
-        job.prompt[:100] + "..." if len(job.prompt) > 100 else job.prompt
-    )
+    prompt_display = job.prompt[:100] + "..." if len(job.prompt) > 100 else job.prompt
     table.add_row("Prompt", prompt_display)
     table.add_row("Media Type", job.media_type.title())
     table.add_row("Model", job.model_name)
@@ -502,9 +500,7 @@ def config_command(
 def run_batch_command(
     input_file: Annotated[
         Path,
-        typer.Argument(
-            ..., help="Path to CSV or JSONL file with generation requests"
-        ),
+        typer.Argument(..., help="Path to CSV or JSONL file with generation requests"),
     ],
     output_dir: Annotated[
         Path,
@@ -593,8 +589,7 @@ async def _async_run_batch(
             test_file.unlink()
         except Exception as e:
             console.print(
-                f"[red]Error: Cannot write to output directory "
-                f"{output_dir}: {e}[/red]"
+                f"[red]Error: Cannot write to output directory {output_dir}: {e}[/red]"
             )
             sys.exit(1)
 
@@ -721,9 +716,7 @@ def _display_batch_summary(summary, verbose: bool) -> None:
     table.add_row("Skipped", f"[yellow]{summary.skipped}[/yellow]")
     table.add_row("Success Rate", f"{summary.success_rate:.1f}%")
     table.add_row("Processing Time", f"{summary.processing_time_seconds:.1f} seconds")
-    table.add_row(
-        "Throughput", f"{summary.throughput_requests_per_minute:.1f} req/min"
-    )
+    table.add_row("Throughput", f"{summary.throughput_requests_per_minute:.1f} req/min")
 
     console.print(table)
 
@@ -735,8 +728,7 @@ def _display_batch_summary(summary, verbose: bool) -> None:
 
     if verbose and summary.failed > 0:
         console.print(
-            "\n[yellow]Check the results log for detailed error "
-            "information[/yellow]"
+            "\n[yellow]Check the results log for detailed error information[/yellow]"
         )
 
 
