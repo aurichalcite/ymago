@@ -8,7 +8,7 @@ cloud API calls.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,45 +25,48 @@ class TestS3StorageBackend:
 
     def test_init_valid_url(self):
         """Test S3 backend initialization with valid URL."""
-        backend = S3StorageBackend(
-            destination_url="s3://test-bucket/path/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-west-2",
-        )
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            backend = S3StorageBackend(
+                destination_url="s3://test-bucket/path/",
+                aws_access_key_id="test-key",
+                aws_secret_access_key="test-secret",
+                aws_region="us-west-2",
+            )
 
-        assert backend.bucket_name == "test-bucket"
-        assert backend.base_path == "path/"
-        assert backend.aws_access_key_id == "test-key"
-        assert backend.aws_secret_access_key == "test-secret"
-        assert backend.aws_region == "us-west-2"
+            assert backend.bucket_name == "test-bucket"
+            assert backend.base_path == "path/"
+            assert backend.aws_access_key_id == "test-key"
+            assert backend.aws_secret_access_key == "test-secret"
+            assert backend.aws_region == "us-west-2"
 
     def test_init_invalid_scheme(self):
         """Test S3 backend initialization with invalid URL scheme."""
-        with pytest.raises(
-            ValueError, match="S3StorageBackend only supports 's3://' URLs"
-        ):
-            S3StorageBackend(destination_url="gs://test-bucket/path/")
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            with pytest.raises(
+                ValueError, match="S3StorageBackend only supports 's3://' URLs"
+            ):
+                S3StorageBackend(destination_url="gs://test-bucket/path/")
 
     def test_init_missing_bucket(self):
         """Test S3 backend initialization with missing bucket name."""
-        with pytest.raises(ValueError, match="S3 URL must include bucket name"):
-            S3StorageBackend(destination_url="s3:///path/")
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            with pytest.raises(ValueError, match="S3 URL must include bucket name"):
+                S3StorageBackend(destination_url="s3:///path/")
 
     def test_init_missing_aioboto3(self):
         """Test S3 backend initialization when aioboto3 is not available."""
-        with patch.dict("sys.modules", {"aioboto3": None}):
+        with patch("ymago.core.cloud_storage.aioboto3", None):
             with pytest.raises(ImportError, match="AWS S3 support requires 'aioboto3'"):
                 S3StorageBackend(destination_url="s3://test-bucket/path/")
 
     @pytest.mark.asyncio
     async def test_upload_file_success(self):
         """Test successful file upload to S3."""
+        mock_s3_client = AsyncMock()
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_s3_client
+
         with patch("ymago.core.cloud_storage.aioboto3") as mock_aioboto3:
-            # Setup mocks
-            mock_session = AsyncMock()
-            mock_client = AsyncMock()
-            mock_session.client.return_value.__aenter__.return_value = mock_client
             mock_aioboto3.Session.return_value = mock_session
 
             backend = S3StorageBackend(
@@ -85,8 +88,10 @@ class TestS3StorageBackend:
                 assert result == "s3://test-bucket/uploads/test-image.jpg"
 
                 # Verify S3 client was called correctly
-                mock_client.upload_file.assert_called_once()
-                call_args = mock_client.upload_file.call_args
+                mock_s3_client.__aenter__.return_value.upload_file.assert_called_once()
+                call_args = (
+                    mock_s3_client.__aenter__.return_value.upload_file.call_args
+                )
                 assert call_args[0][0] == str(tmp_path)  # source file
                 assert call_args[0][1] == "test-bucket"  # bucket
                 assert call_args[0][2] == "uploads/test-image.jpg"  # key
@@ -98,11 +103,11 @@ class TestS3StorageBackend:
     @pytest.mark.asyncio
     async def test_upload_bytes_success(self):
         """Test successful bytes upload to S3."""
+        mock_s3_client = AsyncMock()
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_s3_client
+
         with patch("ymago.core.cloud_storage.aioboto3") as mock_aioboto3:
-            # Setup mocks
-            mock_session = AsyncMock()
-            mock_client = AsyncMock()
-            mock_session.client.return_value.__aenter__.return_value = mock_client
             mock_aioboto3.Session.return_value = mock_session
 
             backend = S3StorageBackend(
@@ -121,7 +126,7 @@ class TestS3StorageBackend:
             assert result == "s3://test-bucket/uploads/test-image.jpg"
 
             # Verify S3 client was called correctly
-            mock_client.put_object.assert_called_once_with(
+            mock_s3_client.__aenter__.return_value.put_object.assert_called_once_with(
                 Bucket="test-bucket",
                 Key="uploads/test-image.jpg",
                 Body=test_data,
@@ -131,12 +136,14 @@ class TestS3StorageBackend:
     @pytest.mark.asyncio
     async def test_upload_with_s3_error(self):
         """Test upload failure due to S3 error."""
+        mock_s3_client = AsyncMock()
+        mock_s3_client.__aenter__.return_value.upload_file.side_effect = Exception(
+            "S3 error"
+        )
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_s3_client
+
         with patch("ymago.core.cloud_storage.aioboto3") as mock_aioboto3:
-            # Setup mocks to raise an exception
-            mock_session = AsyncMock()
-            mock_client = AsyncMock()
-            mock_client.upload_file.side_effect = Exception("S3 error")
-            mock_session.client.return_value.__aenter__.return_value = mock_client
             mock_aioboto3.Session.return_value = mock_session
 
             backend = S3StorageBackend(
@@ -161,11 +168,11 @@ class TestS3StorageBackend:
     @pytest.mark.asyncio
     async def test_exists_true(self):
         """Test exists method when file exists."""
+        mock_s3_client = AsyncMock()
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_s3_client
+
         with patch("ymago.core.cloud_storage.aioboto3") as mock_aioboto3:
-            # Setup mocks
-            mock_session = AsyncMock()
-            mock_client = AsyncMock()
-            mock_session.client.return_value.__aenter__.return_value = mock_client
             mock_aioboto3.Session.return_value = mock_session
 
             backend = S3StorageBackend(
@@ -178,19 +185,21 @@ class TestS3StorageBackend:
             result = await backend.exists("test-image.jpg")
 
             assert result is True
-            mock_client.head_object.assert_called_once_with(
+            mock_s3_client.__aenter__.return_value.head_object.assert_called_once_with(
                 Bucket="test-bucket", Key="uploads/test-image.jpg"
             )
 
     @pytest.mark.asyncio
     async def test_exists_false(self):
         """Test exists method when file doesn't exist."""
+        mock_s3_client = AsyncMock()
+        mock_s3_client.__aenter__.return_value.head_object.side_effect = Exception(
+            "Not found"
+        )
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_s3_client
+
         with patch("ymago.core.cloud_storage.aioboto3") as mock_aioboto3:
-            # Setup mocks to raise an exception (file not found)
-            mock_session = AsyncMock()
-            mock_client = AsyncMock()
-            mock_client.head_object.side_effect = Exception("Not found")
-            mock_session.client.return_value.__aenter__.return_value = mock_client
             mock_aioboto3.Session.return_value = mock_session
 
             backend = S3StorageBackend(
@@ -210,29 +219,32 @@ class TestGCSStorageBackend:
 
     def test_init_valid_url(self):
         """Test GCS backend initialization with valid URL."""
-        backend = GCSStorageBackend(
-            destination_url="gs://test-bucket/path/", service_account_path=None
-        )
+        with patch("ymago.core.cloud_storage.Storage", MagicMock()):
+            backend = GCSStorageBackend(
+                destination_url="gs://test-bucket/path/", service_account_path=None
+            )
 
-        assert backend.bucket_name == "test-bucket"
-        assert backend.base_path == "path/"
-        assert backend.service_account_path is None
+            assert backend.bucket_name == "test-bucket"
+            assert backend.base_path == "path/"
+            assert backend.service_account_path is None
 
     def test_init_invalid_scheme(self):
         """Test GCS backend initialization with invalid URL scheme."""
-        with pytest.raises(
-            ValueError, match="GCSStorageBackend only supports 'gs://' URLs"
-        ):
-            GCSStorageBackend(destination_url="s3://test-bucket/path/")
+        with patch("ymago.core.cloud_storage.Storage", MagicMock()):
+            with pytest.raises(
+                ValueError, match="GCSStorageBackend only supports 'gs://' URLs"
+            ):
+                GCSStorageBackend(destination_url="s3://test-bucket/path/")
 
     def test_init_missing_bucket(self):
         """Test GCS backend initialization with missing bucket name."""
-        with pytest.raises(ValueError, match="GCS URL must include bucket name"):
-            GCSStorageBackend(destination_url="gs:///path/")
+        with patch("ymago.core.cloud_storage.Storage", MagicMock()):
+            with pytest.raises(ValueError, match="GCS URL must include bucket name"):
+                GCSStorageBackend(destination_url="gs:///path/")
 
     def test_init_missing_gcloud_aio(self):
         """Test GCS backend initialization when gcloud-aio-storage is not available."""
-        with patch.dict("sys.modules", {"gcloud.aio.storage": None}):
+        with patch("ymago.core.cloud_storage.Storage", None):
             with pytest.raises(
                 ImportError, match="Google Cloud Storage support requires"
             ):
@@ -241,11 +253,9 @@ class TestGCSStorageBackend:
     @pytest.mark.asyncio
     async def test_upload_bytes_success(self):
         """Test successful bytes upload to GCS."""
+        mock_storage = AsyncMock()
         with patch("ymago.core.cloud_storage.Storage") as mock_storage_class:
-            # Setup mocks
-            mock_storage = AsyncMock()
-            mock_storage_class.return_value.__aenter__.return_value = mock_storage
-
+            mock_storage_class.return_value = mock_storage
             backend = GCSStorageBackend(
                 destination_url="gs://test-bucket/uploads/", service_account_path=None
             )
@@ -260,7 +270,7 @@ class TestGCSStorageBackend:
             assert result == "gs://test-bucket/uploads/test-image.jpg"
 
             # Verify GCS client was called correctly
-            mock_storage.upload.assert_called_once_with(
+            mock_storage.__aenter__.return_value.upload.assert_called_once_with(
                 bucket="test-bucket",
                 object_name="uploads/test-image.jpg",
                 file_data=test_data,
@@ -273,29 +283,31 @@ class TestR2StorageBackend:
 
     def test_init_valid_url(self):
         """Test R2 backend initialization with valid URL."""
-        backend = R2StorageBackend(
-            destination_url="r2://test-bucket/path/",
-            r2_account_id="test-account",
-            r2_access_key_id="test-key",
-            r2_secret_access_key="test-secret",
-        )
-
-        assert backend.bucket_name == "test-bucket"
-        assert backend.base_path == "path/"
-        assert backend.r2_account_id == "test-account"
-        assert backend.endpoint_url == "https://test-account.r2.cloudflarestorage.com"
-
-    def test_init_invalid_scheme(self):
-        """Test R2 backend initialization with invalid URL scheme."""
-        with pytest.raises(
-            ValueError, match="R2StorageBackend only supports 'r2://' URLs"
-        ):
-            R2StorageBackend(
-                destination_url="s3://test-bucket/path/",
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            backend = R2StorageBackend(
+                destination_url="r2://test-bucket/path/",
                 r2_account_id="test-account",
                 r2_access_key_id="test-key",
                 r2_secret_access_key="test-secret",
             )
+
+            assert backend.bucket_name == "test-bucket"
+            assert backend.base_path == "path/"
+            assert backend.r2_account_id == "test-account"
+            assert backend.endpoint_url == "https://test-account.r2.cloudflarestorage.com"
+
+    def test_init_invalid_scheme(self):
+        """Test R2 backend initialization with invalid URL scheme."""
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            with pytest.raises(
+                ValueError, match="R2StorageBackend only supports 'r2://' URLs"
+            ):
+                R2StorageBackend(
+                    destination_url="s3://test-bucket/path/",
+                    r2_account_id="test-account",
+                    r2_access_key_id="test-key",
+                    r2_secret_access_key="test-secret",
+                )
 
 
 class TestStorageBackendRegistry:
@@ -313,14 +325,15 @@ class TestStorageBackendRegistry:
 
     def test_create_backend_s3(self):
         """Test creating S3 backend through registry."""
-        backend = StorageBackendRegistry.create_backend(
-            "s3://test-bucket/path/",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-        )
+        with patch("ymago.core.cloud_storage.aioboto3", MagicMock()):
+            backend = StorageBackendRegistry.create_backend(
+                "s3://test-bucket/path/",
+                aws_access_key_id="test-key",
+                aws_secret_access_key="test-secret",
+            )
 
-        assert isinstance(backend, S3StorageBackend)
-        assert backend.bucket_name == "test-bucket"
+            assert isinstance(backend, S3StorageBackend)
+            assert backend.bucket_name == "test-bucket"
 
     def test_create_backend_unsupported_scheme(self):
         """Test creating backend with unsupported scheme."""

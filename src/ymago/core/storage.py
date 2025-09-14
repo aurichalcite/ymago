@@ -189,7 +189,8 @@ class LocalStorageUploader(StorageUploader):
             parsed = urlparse(destination_url)
             if parsed.scheme != "file":
                 raise ValueError(
-                    f"LocalStorageUploader only supports 'file://' URLs, got: {parsed.scheme}"
+                    "LocalStorageUploader only supports 'file://' URLs, "
+                    f"got: {parsed.scheme}"
                 )
             self.base_directory = Path(parsed.path).resolve()
         elif base_directory:

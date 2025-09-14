@@ -25,6 +25,16 @@ from .storage import StorageBackendRegistry, StorageError, StorageUploader
 
 logger = logging.getLogger(__name__)
 
+try:
+    import aioboto3
+except ImportError:
+    aioboto3 = None
+
+try:
+    from gcloud.aio.storage import Storage
+except ImportError:
+    Storage = None
+
 
 class S3StorageBackend(StorageUploader):
     """
@@ -50,12 +60,11 @@ class S3StorageBackend(StorageUploader):
             aws_secret_access_key: AWS secret key (optional, uses IAM if not provided)
             aws_region: AWS region
         """
-        try:
-            import aioboto3
-        except ImportError as e:
+        if aioboto3 is None:
             raise ImportError(
-                "AWS S3 support requires 'aioboto3'. Install with: pip install 'ymago[aws]'"
-            ) from e
+                "AWS S3 support requires 'aioboto3'. "
+                "Install with: pip install 'ymago[aws]'"
+            )
 
         parsed = urlparse(destination_url)
         if parsed.scheme != "s3":
@@ -104,10 +113,8 @@ class S3StorageBackend(StorageUploader):
         Returns:
             str: S3 URL of the uploaded file
         """
-        try:
-            import aioboto3
-        except ImportError as e:
-            raise StorageError("aioboto3 not available") from e
+        if aioboto3 is None:
+            raise StorageError("aioboto3 not available")
 
         # Determine content type
         content_type, _ = mimetypes.guess_type(str(file_path))
@@ -115,7 +122,7 @@ class S3StorageBackend(StorageUploader):
             content_type = "application/octet-stream"
 
         # Construct full S3 key
-        s3_key = f"{self.base_path}/{destination_key}".strip("/")
+        s3_key = (Path(self.base_path) / destination_key).as_posix()
 
         session = aioboto3.Session(**self._get_session_kwargs())
 
@@ -156,13 +163,11 @@ class S3StorageBackend(StorageUploader):
         Returns:
             str: S3 URL of the uploaded file
         """
-        try:
-            import aioboto3
-        except ImportError as e:
-            raise StorageError("aioboto3 not available") from e
+        if aioboto3 is None:
+            raise StorageError("aioboto3 not available")
 
         # Construct full S3 key
-        s3_key = f"{self.base_path}/{destination_key}".strip("/")
+        s3_key = (Path(self.base_path) / destination_key).as_posix()
 
         session = aioboto3.Session(**self._get_session_kwargs())
 
@@ -184,11 +189,9 @@ class S3StorageBackend(StorageUploader):
 
     async def exists(self, destination_key: str) -> bool:
         """Check if a file exists in S3."""
-        s3_key = f"{self.base_path}/{destination_key}".strip("/")
+        s3_key = (Path(self.base_path) / destination_key).as_posix()
 
-        try:
-            import aioboto3
-        except ImportError:
+        if aioboto3 is None:
             return False
 
         session = aioboto3.Session(**self._get_session_kwargs())
@@ -202,11 +205,9 @@ class S3StorageBackend(StorageUploader):
 
     async def delete(self, destination_key: str) -> bool:
         """Delete a file from S3."""
-        s3_key = f"{self.base_path}/{destination_key}".strip("/")
+        s3_key = (Path(self.base_path) / destination_key).as_posix()
 
-        try:
-            import aioboto3
-        except ImportError:
+        if aioboto3 is None:
             return False
 
         session = aioboto3.Session(**self._get_session_kwargs())
@@ -289,13 +290,11 @@ class GCSStorageBackend(StorageUploader):
             destination_url: GCS URL (e.g., 'gs://bucket-name/path/')
             service_account_path: Path to service account JSON file (optional)
         """
-        try:
-            from gcloud.aio.storage import Storage
-        except ImportError as e:
+        if Storage is None:
             raise ImportError(
                 "Google Cloud Storage support requires 'gcloud-aio-storage'. "
                 "Install with: pip install 'ymago[gcp]'"
-            ) from e
+            )
 
         parsed = urlparse(destination_url)
         if parsed.scheme != "gs":
@@ -328,10 +327,8 @@ class GCSStorageBackend(StorageUploader):
         Returns:
             str: GCS URL of the uploaded file
         """
-        try:
-            from gcloud.aio.storage import Storage
-        except ImportError as e:
-            raise StorageError("gcloud-aio-storage not available") from e
+        if Storage is None:
+            raise StorageError("gcloud-aio-storage not available")
 
         # Determine content type
         content_type, _ = mimetypes.guess_type(str(file_path))
@@ -339,7 +336,7 @@ class GCSStorageBackend(StorageUploader):
             content_type = "application/octet-stream"
 
         # Construct full GCS object name
-        object_name = f"{self.base_path}/{destination_key}".strip("/")
+        object_name = (Path(self.base_path) / destination_key).as_posix()
 
         # Read file data
         async with aiofiles.open(file_path, "rb") as f:
@@ -387,13 +384,11 @@ class GCSStorageBackend(StorageUploader):
         Returns:
             str: GCS URL of the uploaded file
         """
-        try:
-            from gcloud.aio.storage import Storage
-        except ImportError as e:
-            raise StorageError("gcloud-aio-storage not available") from e
+        if Storage is None:
+            raise StorageError("gcloud-aio-storage not available")
 
         # Construct full GCS object name
-        object_name = f"{self.base_path}/{destination_key}".strip("/")
+        object_name = (Path(self.base_path) / destination_key).as_posix()
 
         try:
             # Initialize storage client
@@ -418,11 +413,9 @@ class GCSStorageBackend(StorageUploader):
 
     async def exists(self, destination_key: str) -> bool:
         """Check if a file exists in GCS."""
-        object_name = f"{self.base_path}/{destination_key}".strip("/")
+        object_name = (Path(self.base_path) / destination_key).as_posix()
 
-        try:
-            from gcloud.aio.storage import Storage
-        except ImportError:
+        if Storage is None:
             return False
 
         try:
@@ -441,11 +434,9 @@ class GCSStorageBackend(StorageUploader):
 
     async def delete(self, destination_key: str) -> bool:
         """Delete a file from GCS."""
-        object_name = f"{self.base_path}/{destination_key}".strip("/")
+        object_name = (Path(self.base_path) / destination_key).as_posix()
 
-        try:
-            from gcloud.aio.storage import Storage
-        except ImportError:
+        if Storage is None:
             return False
 
         try:
