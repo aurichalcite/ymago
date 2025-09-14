@@ -28,7 +28,7 @@ class TestTokenBucketRateLimiter:
         limiter = TokenBucketRateLimiter(60)
 
         # Consume burst tokens first (bucket_size is 60/10 = 6)
-        for _ in range(limiter.bucket_size):
+        for _ in range(int(limiter.bucket_size)):
             await limiter.acquire()
 
         start_time = time.time()

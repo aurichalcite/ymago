@@ -10,12 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 from .constants import DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL
 
 
-class GenerationJob(BaseModel):
+class GenerationJob(BaseModel):  # type: ignore[misc]
     """
     Represents a single media generation job with all required parameters.
 
@@ -80,7 +80,7 @@ class GenerationJob(BaseModel):
         pattern=r"^\d+:\d+$",
     )
 
-    @field_validator("prompt")
+    @field_validator("prompt")  # type: ignore[misc]
     @classmethod
     def validate_prompt(cls, v: str) -> str:
         """Validate and clean the prompt text."""
@@ -89,7 +89,7 @@ class GenerationJob(BaseModel):
             raise ValueError("Prompt cannot be empty or only whitespace")
         return cleaned
 
-    @field_validator("negative_prompt")
+    @field_validator("negative_prompt")  # type: ignore[misc]
     @classmethod
     def validate_negative_prompt(cls, v: Optional[str]) -> Optional[str]:
         """Validate and clean the negative prompt text."""
@@ -98,7 +98,7 @@ class GenerationJob(BaseModel):
         cleaned = v.strip()
         return cleaned if cleaned else None
 
-    @field_validator("from_image")
+    @field_validator("from_image")  # type: ignore[misc]
     @classmethod
     def validate_from_image(cls, v: Optional[str]) -> Optional[str]:
         """Validate source image if provided (URL or path)."""
@@ -126,7 +126,7 @@ class GenerationJob(BaseModel):
         # It's a valid URL, so we return it cleaned.
         return cleaned
 
-    @field_validator("seed")
+    @field_validator("seed")  # type: ignore[misc]
     @classmethod
     def validate_seed(cls, v: Optional[int]) -> Optional[int]:
         """Validate seed value, converting -1 to None for random generation."""
@@ -134,7 +134,7 @@ class GenerationJob(BaseModel):
             return None
         return v
 
-    @field_validator("output_filename")
+    @field_validator("output_filename")  # type: ignore[misc]
     @classmethod
     def validate_filename(cls, v: Optional[str]) -> Optional[str]:
         """Validate custom filename if provided."""
@@ -168,7 +168,7 @@ class GenerationJob(BaseModel):
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
-class GenerationResult(BaseModel):
+class GenerationResult(BaseModel):  # type: ignore[misc]
     """
     Represents the result of a completed media generation job.
 
@@ -197,7 +197,7 @@ class GenerationResult(BaseModel):
         default=None, description="Time taken to generate the media in seconds", ge=0.0
     )
 
-    @field_validator("local_path")
+    @field_validator("local_path")  # type: ignore[misc]
     @classmethod
     def validate_local_path(cls, v: Path) -> Path:
         """Validate that the local path is absolute."""
@@ -218,7 +218,7 @@ class GenerationResult(BaseModel):
 # Batch Processing Models
 
 
-class GenerationRequest(BaseModel):
+class GenerationRequest(BaseModel):  # type: ignore[misc]
     """
     Represents a single generation request within a batch operation.
 
@@ -315,7 +315,7 @@ class GenerationRequest(BaseModel):
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
-class BatchResult(BaseModel):
+class BatchResult(BaseModel):  # type: ignore[misc]
     """
     Represents the result of processing a single request within a batch.
 
@@ -364,7 +364,7 @@ class BatchResult(BaseModel):
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
-class BatchSummary(BaseModel):
+class BatchSummary(BaseModel):  # type: ignore[misc]
     """
     Represents the final summary of a completed batch processing operation.
 
@@ -409,9 +409,9 @@ class BatchSummary(BaseModel):
         description="ISO timestamp when batch processing completed",
     )
 
-    @field_validator("successful", "failed", "skipped")
+    @field_validator("successful", "failed", "skipped")  # type: ignore[misc]
     @classmethod
-    def validate_counts(cls, v: int, info) -> int:
+    def validate_counts(cls, v: int, info: ValidationInfo) -> int:
         """Validate that counts are non-negative."""
         if v < 0:
             raise ValueError(f"{info.field_name} count cannot be negative")

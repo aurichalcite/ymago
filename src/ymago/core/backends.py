@@ -301,7 +301,7 @@ class LocalExecutionBackend(ExecutionBackend):
             await rate_limiter.acquire()
 
             async with semaphore:
-                return await self._process_request_with_retry(
+                return await self._process_request_with_retry(  # type: ignore[no-any-return]
                     request, output_dir, state_file
                 )
 
@@ -375,7 +375,7 @@ class LocalExecutionBackend(ExecutionBackend):
 
         return completed_requests
 
-    @retry(
+    @retry(  # type: ignore[misc]
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=8),
         retry=retry_if_exception_type((ConnectionError, TimeoutError)),
@@ -456,8 +456,10 @@ class TokenBucketRateLimiter:
     def __init__(self, requests_per_minute: int):
         self.requests_per_minute = requests_per_minute
         self.tokens_per_second = requests_per_minute / 60.0
-        self.bucket_size = max(1, requests_per_minute // 10)  # Allow small bursts
-        self.tokens = self.bucket_size
+        self.bucket_size: float = float(
+            max(1, requests_per_minute // 10)
+        )  # Allow small bursts
+        self.tokens: float = self.bucket_size
         self.last_update = time.time()
         self._lock = asyncio.Lock()
 
