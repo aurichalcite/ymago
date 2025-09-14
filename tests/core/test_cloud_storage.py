@@ -89,9 +89,7 @@ class TestS3StorageBackend:
 
                 # Verify S3 client was called correctly
                 mock_s3_client.__aenter__.return_value.upload_file.assert_called_once()
-                call_args = (
-                    mock_s3_client.__aenter__.return_value.upload_file.call_args
-                )
+                call_args = mock_s3_client.__aenter__.return_value.upload_file.call_args
                 assert call_args[0][0] == str(tmp_path)  # source file
                 assert call_args[0][1] == "test-bucket"  # bucket
                 assert call_args[0][2] == "uploads/test-image.jpg"  # key
@@ -294,7 +292,9 @@ class TestR2StorageBackend:
             assert backend.bucket_name == "test-bucket"
             assert backend.base_path == "path/"
             assert backend.r2_account_id == "test-account"
-            assert backend.endpoint_url == "https://test-account.r2.cloudflarestorage.com"
+            assert (
+                backend.endpoint_url == "https://test-account.r2.cloudflarestorage.com"
+            )
 
     def test_init_invalid_scheme(self):
         """Test R2 backend initialization with invalid URL scheme."""

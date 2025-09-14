@@ -133,14 +133,14 @@ async def process_generation_job(
             cs_config = config.cloud_storage
             if destination_url.startswith("s3://"):
                 storage_kwargs["aws_access_key_id"] = cs_config.aws_access_key_id
-                storage_kwargs[
-                    "aws_secret_access_key"
-                ] = cs_config.aws_secret_access_key
+                storage_kwargs["aws_secret_access_key"] = (
+                    cs_config.aws_secret_access_key
+                )
                 storage_kwargs["aws_region"] = cs_config.aws_region
             elif destination_url.startswith("gs://"):
-                storage_kwargs[
-                    "service_account_path"
-                ] = cs_config.gcp_service_account_path
+                storage_kwargs["service_account_path"] = (
+                    cs_config.gcp_service_account_path
+                )
             elif destination_url.startswith("r2://"):
                 if not all(
                     [
