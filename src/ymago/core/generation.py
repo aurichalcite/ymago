@@ -5,6 +5,7 @@ This module coordinates the entire image generation process, from API calls
 to file storage, with comprehensive error handling and cleanup.
 """
 
+import asyncio
 import logging
 import tempfile
 import time
@@ -229,8 +230,10 @@ async def process_generation_job(
             )
 
             # Send webhook notification (fire-and-forget)
-            notification_service.send_notification_async(
-                session, webhook_url, success_payload
+            asyncio.create_task(
+                notification_service.send_notification_async(
+                    session, webhook_url, success_payload
+                )
             )
 
         # Step 10: Create and populate result
@@ -287,8 +290,10 @@ async def process_generation_job(
                 )
 
                 # Send failure webhook notification (fire-and-forget)
-                notification_service.send_notification_async(
-                    session, webhook_url, failure_payload
+                asyncio.create_task(
+                    notification_service.send_notification_async(
+                        session, webhook_url, failure_payload
+                    )
                 )
             except Exception as webhook_error:
                 # Log webhook error but don't fail the main exception
