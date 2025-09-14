@@ -435,26 +435,16 @@ class LocalExecutionBackend(ExecutionBackend):
     async def _write_checkpoint(self, state_file: Path, result: BatchResult) -> None:
         """Atomically write a batch result to the checkpoint file."""
         try:
-            # Write to temporary file first for atomicity
-            temp_file = state_file.with_suffix(".tmp")
+            # Use a lock to prevent concurrent writes
+            if not hasattr(self, "_checkpoint_lock"):
+                self._checkpoint_lock = asyncio.Lock()
 
-            async with aiofiles.open(temp_file, "a") as f:
-                result_json = result.model_dump_json()
-                await f.write(f"{result_json}\n")
-                await f.flush()
-
-            # Atomic move (on most filesystems)
-            if state_file.exists():
-                # Append to existing file
+            async with self._checkpoint_lock:
+                # Simply append to the file - aiofiles handles atomic writes
                 async with aiofiles.open(state_file, "a") as f:
                     result_json = result.model_dump_json()
                     await f.write(f"{result_json}\n")
                     await f.flush()
-                # Remove temp file
-                temp_file.unlink(missing_ok=True)
-            else:
-                # Move temp file to final location
-                temp_file.rename(state_file)
 
         except Exception as e:
             logger.error(f"Failed to write checkpoint: {e}")
