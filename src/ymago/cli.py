@@ -8,7 +8,7 @@ for progress indication and user feedback.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
@@ -32,7 +32,7 @@ from .models import GenerationJob, GenerationResult
 # Create the main Typer application
 app = typer.Typer(
     name="ymago",
-    help="An advanced, asynchronous command-line toolkit for generative AI media.",
+    help="An advanced, async command-line toolkit for generative AI media.",
     no_args_is_help=True,
 )
 
@@ -143,15 +143,15 @@ def generate_image_command(
     Generate an image from a text prompt.
 
     This command generates an image using Google's Generative AI and saves it
-    to the configured output directory. Supports advanced features like negative
-    prompts and image-to-image generation.
+    to the configured output directory. It supports advanced features like
+    negative prompts and image-to-image generation.
 
     Examples:
         ymago image generate "A beautiful sunset over mountains"
-        ymago image generate "A cat wearing a hat" --filename "cat_hat" --seed 42
-        ymago image generate "Abstract art" --quality high --aspect-ratio 16:9
-        ymago image generate "A forest scene" --negative-prompt "buildings, cars"
-        ymago image generate "Transform this image" --from-image "https://example.com/image.jpg"
+        ymago image generate "A cat wearing a hat" --filename "cat_hat" -s 42
+        ymago image generate "Abstract art" -q high -a 16:9
+        ymago image generate "A forest scene" -n "buildings, cars"
+        ymago image generate "Transform this image" --from-image "https://.../image.jpg"
     """
 
     async def _async_generate() -> None:
@@ -264,14 +264,14 @@ def generate_video_command(
     Generate a video from a text prompt.
 
     This command generates a video using Google's Veo model and saves it
-    to the configured output directory. Supports advanced features like negative
-    prompts and image-to-video generation.
+    to the configured output directory. It supports advanced features like
+    negative prompts and image-to-video generation.
 
     Examples:
         ymago video generate "A cat playing in a garden"
-        ymago video generate "Ocean waves" --filename "waves" --seed 42
-        ymago video generate "Dancing" --aspect-ratio 9:16 --negative-prompt "static"
-        ymago video generate "Animate this image" --from-image "https://example.com/image.jpg"
+        ymago video generate "Ocean waves" --filename "waves" -s 42
+        ymago video generate "Dancing" -a 9:16 -n "static"
+        ymago video generate "Animate this image" --from-image "https://.../image.jpg"
     """
 
     async def _async_generate_video() -> None:
@@ -350,7 +350,9 @@ def _display_job_info(job: GenerationJob) -> None:
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="white")
 
-    prompt_display = job.prompt[:100] + "..." if len(job.prompt) > 100 else job.prompt
+    prompt_display = (
+        job.prompt[:100] + "..." if len(job.prompt) > 100 else job.prompt
+    )
     table.add_row("Prompt", prompt_display)
     table.add_row("Media Type", job.media_type.title())
     table.add_row("Model", job.model_name)
@@ -498,15 +500,21 @@ def config_command(
 
 @batch_app.command("run")
 def run_batch_command(
-    input_file: Path = typer.Argument(
-        ..., help="Path to CSV or JSONL input file containing generation requests"
-    ),
-    output_dir: Path = typer.Option(
-        ...,
-        "--output-dir",
-        "-o",
-        help="Directory for storing results, logs, and state files",
-    ),
+    input_file: Annotated[
+        Path,
+        typer.Argument(
+            ..., help="Path to CSV or JSONL file with generation requests"
+        ),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output-dir",
+            "-o",
+            help="Directory for storing results, logs, and state",
+        ),
+    ],
     concurrency: int = typer.Option(
         10,
         "--concurrency",
@@ -519,7 +527,7 @@ def run_batch_command(
         60, "--rate-limit", "-r", help="Maximum requests per minute", min=1, max=300
     ),
     resume: bool = typer.Option(
-        False, "--resume/--no-resume", help="Resume from checkpoint in output directory"
+        False, "--resume/--no-resume", help="Resume from checkpoint in output dir"
     ),
     format_hint: Optional[str] = typer.Option(
         None,
@@ -541,9 +549,9 @@ def run_batch_command(
     resilient execution, rate limiting, and checkpoint-based resumption.
 
     Examples:
-        ymago batch run prompts.csv --output-dir ./results/
-        ymago batch run requests.jsonl -o ./batch_output/ --concurrency 20
-        ymago batch run data.csv -o ./results/ --resume --rate-limit 120
+        ymago batch run prompts.csv -o ./results/
+        ymago batch run reqs.jsonl -o ./out/ -c 20
+        ymago batch run data.csv -o ./res/ --resume -r 120
         ymago batch run prompts.csv -o ./test/ --dry-run
     """
     asyncio.run(
@@ -585,7 +593,8 @@ async def _async_run_batch(
             test_file.unlink()
         except Exception as e:
             console.print(
-                f"[red]Error: Cannot write to output directory {output_dir}: {e}[/red]"
+                f"[red]Error: Cannot write to output directory "
+                f"{output_dir}: {e}[/red]"
             )
             sys.exit(1)
 
@@ -629,9 +638,8 @@ async def _async_run_batch(
             console.print(f"Would process {request_count} requests with:")
             console.print(f"  • Concurrency: {concurrency}")
             console.print(f"  • Rate limit: {rate_limit} requests/minute")
-            console.print(
-                f"  • Estimated time: {_estimate_processing_time(request_count, rate_limit)}"
-            )
+            estimated_time = _estimate_processing_time(request_count, rate_limit)
+            console.print(f"  • Estimated time: {estimated_time}")
             return
 
         # Initialize backend and start processing
@@ -714,7 +722,7 @@ def _display_batch_summary(summary, verbose: bool) -> None:
     table.add_row("Success Rate", f"{summary.success_rate:.1f}%")
     table.add_row("Processing Time", f"{summary.processing_time_seconds:.1f} seconds")
     table.add_row(
-        "Throughput", f"{summary.throughput_requests_per_minute:.1f} requests/minute"
+        "Throughput", f"{summary.throughput_requests_per_minute:.1f} req/min"
     )
 
     console.print(table)
@@ -727,7 +735,8 @@ def _display_batch_summary(summary, verbose: bool) -> None:
 
     if verbose and summary.failed > 0:
         console.print(
-            "\n[yellow]Check the results log for detailed error information[/yellow]"
+            "\n[yellow]Check the results log for detailed error "
+            "information[/yellow]"
         )
 
 

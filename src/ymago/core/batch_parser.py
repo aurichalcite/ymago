@@ -310,5 +310,8 @@ async def _write_rejected_rows(
             raw_data_str = json.dumps(row.raw_data).replace('"', '""')
             error_msg_escaped = row.error_message.replace('"', '""')
 
-            line = f'{row.row_number},"{row.error_type}","{error_msg_escaped}","{raw_data_str}"\n'
+            line = (
+                f'{row.row_number},"{row.error_type}",'
+                f'"{error_msg_escaped}","{raw_data_str}"\n'
+            )
             await f.write(line)

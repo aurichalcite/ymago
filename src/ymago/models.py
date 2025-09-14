@@ -263,7 +263,10 @@ class GenerationRequest(BaseModel):
 
     from_image: Optional[str] = Field(
         default=None,
-        description="URL or path of source image for image-to-image/image-to-video generation",
+        description=(
+            "URL or path of source image for "
+            "image-to-image/image-to-video generation"
+        ),
     )
 
     quality: Optional[str] = Field(

@@ -5,6 +5,7 @@ This module tests the streaming parser for CSV and JSONL files with
 comprehensive coverage of error handling and validation scenarios.
 """
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -250,9 +251,15 @@ class TestParseBatchInput:
 
     async def test_parse_jsonl_file_valid(self):
         """Test parsing valid JSONL file."""
-        jsonl_content = """{"prompt": "A beautiful sunset", "output_filename": "sunset", "seed": 42}
-{"prompt": "A mountain landscape", "output_filename": "mountain", "seed": 123}
-"""
+        jsonl_lines = [
+            {"prompt": "A beautiful sunset", "output_filename": "sunset", "seed": 42},
+            {
+                "prompt": "A mountain landscape",
+                "output_filename": "mountain",
+                "seed": 123,
+            },
+        ]
+        jsonl_content = "\n".join(json.dumps(line) for line in jsonl_lines)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write(jsonl_content)
