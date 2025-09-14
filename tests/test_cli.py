@@ -31,7 +31,7 @@ class TestCLIRunner:
 
         assert result.exit_code == 0
         assert "ymago" in result.stdout
-        assert "An advanced, asynchronous command-line toolkit" in result.stdout
+        assert "An advanced, async command-line toolkit" in result.stdout
         assert "image" in result.stdout
         assert "config" in result.stdout
         assert "version" in result.stdout

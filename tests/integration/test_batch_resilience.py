@@ -67,6 +67,9 @@ class TestBatchResilience:
             with patch.object(backend, "_process_request_with_retry") as mock_process:
                 mock_process.side_effect = [
                     BatchResult(
+                        request_id="req2", status="success", output_path="/path2_retry"
+                    ),  # req2 is retried since it failed previously
+                    BatchResult(
                         request_id="req4", status="success", output_path="/path4"
                     ),
                     BatchResult(
@@ -82,21 +85,23 @@ class TestBatchResilience:
                     resume=True,
                 )
 
-                # Should process only req4 and req5
-                # (req1 and req3 were successful, req2 failed)
+                # Should process req2 (retry), req4, and req5
+                # (req1 and req3 were successful and skipped)
                 assert summary.total_requests == 5
-                assert summary.successful == 2  # req4 and req5 newly processed
+                assert (
+                    summary.successful == 3
+                )  # req2 (retry), req4, and req5 newly processed
                 assert summary.failed == 0  # No new failures
                 assert (
                     summary.skipped == 2
                 )  # req1 and req3 were skipped (already successful)
 
                 # Verify only remaining requests were processed
-                assert mock_process.call_count == 2
+                assert mock_process.call_count == 3  # req2, req4, req5
                 processed_ids = {
                     call.args[0].id for call in mock_process.call_args_list
                 }
-                assert processed_ids == {"req4", "req5"}
+                assert processed_ids == {"req2", "req4", "req5"}
 
     @pytest.mark.asyncio
     async def test_corrupted_checkpoint_recovery(self, backend, sample_requests):

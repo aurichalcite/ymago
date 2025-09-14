@@ -27,17 +27,16 @@ class TestTokenBucketRateLimiter:
         # 60 requests per minute = 1 per second
         limiter = TokenBucketRateLimiter(60)
 
+        # Consume burst tokens first (bucket_size is 60/10 = 6)
+        for _ in range(limiter.bucket_size):
+            await limiter.acquire()
+
         start_time = time.time()
 
-        # First request should be immediate
+        # Next request should be rate limited
         await limiter.acquire()
         first_time = time.time() - start_time
-        assert first_time < 0.1  # Should be nearly instant
-
-        # Second request should be delayed
-        await limiter.acquire()
-        second_time = time.time() - start_time
-        assert second_time >= 0.9  # Should wait ~1 second
+        assert first_time >= 0.9  # Should wait ~1 second for new token
 
     @pytest.mark.asyncio
     async def test_rate_limiter_burst(self):
@@ -173,9 +172,9 @@ class TestLocalExecutionBackendBatch:
                 metadata={"test": "data"},
             )
 
-            with patch("ymago.core.backends.load_config") as mock_config:
+            with patch("ymago.config.load_config") as mock_config:
                 with patch(
-                    "ymago.core.backends.process_generation_job"
+                    "ymago.core.generation.process_generation_job"
                 ) as mock_process:
                     mock_config.return_value = MagicMock()
                     mock_process.return_value = mock_result
@@ -199,9 +198,9 @@ class TestLocalExecutionBackendBatch:
             request = GenerationRequest(id="test_req", prompt="Test prompt")
 
             # Mock the dependencies to raise an exception
-            with patch("ymago.core.backends.load_config") as mock_config:
+            with patch("ymago.config.load_config") as mock_config:
                 with patch(
-                    "ymago.core.backends.process_generation_job"
+                    "ymago.core.generation.process_generation_job"
                 ) as mock_process:
                     mock_config.return_value = MagicMock()
                     mock_process.side_effect = Exception("Test error")

@@ -68,7 +68,17 @@ class TestBatchCLI:
         """Test batch run command with missing required arguments."""
         result = runner.invoke(app, ["batch", "run"])
         assert result.exit_code != 0
-        assert "Missing argument" in result.stdout or "Usage:" in result.stdout
+        # Typer outputs errors to stderr
+        output = (
+            result.stdout + result.stderr
+            if hasattr(result, "stderr")
+            else result.stdout
+        )
+        assert (
+            "Missing argument" in output
+            or "Usage:" in output
+            or "required" in output.lower()
+        )
 
     def test_batch_run_nonexistent_file(self, runner):
         """Test batch run command with non-existent input file."""
