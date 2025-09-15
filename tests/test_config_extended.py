@@ -158,9 +158,7 @@ class TestExtendedSettings:
                 aws_secret_access_key="secret123",
                 aws_region="us-west-2",
             ),
-            webhooks=WebhookConfig(
-                enabled=True, timeout_seconds=45, retry_attempts=4
-            ),
+            webhooks=WebhookConfig(enabled=True, timeout_seconds=45, retry_attempts=4),
         )
 
         assert settings.auth.google_api_key == "test-key"
