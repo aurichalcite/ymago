@@ -171,7 +171,6 @@ class NotificationService:
             logger.error(f"Failed to send webhook notification to {webhook_url}: {e}")
 
 
-
 def create_success_payload(
     job_id: str,
     output_url: str,

@@ -44,9 +44,7 @@ class StorageBackendRegistry:
         cls._backends[scheme] = backend_class
 
     @classmethod
-    def create_backend(
-        cls, destination_url: str, **kwargs: Any
-    ) -> "StorageUploader":
+    def create_backend(cls, destination_url: str, **kwargs: Any) -> "StorageUploader":
         """
         Create appropriate backend based on destination URL scheme.
 
