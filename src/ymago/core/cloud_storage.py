@@ -9,7 +9,7 @@ and Cloudflare R2.
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Type
 from urllib.parse import urlparse
 
 import aiofiles
@@ -30,10 +30,13 @@ try:
 except ImportError:
     aioboto3 = None
 
+Storage: Optional[Type[Any]] = None
 try:
-    from gcloud.aio.storage import Storage
+    from gcloud.aio.storage import Storage as _Storage
+
+    Storage = _Storage
 except ImportError:
-    Storage = None
+    pass
 
 
 class S3StorageBackend(StorageUploader):
@@ -128,7 +131,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:  # type: ignore
+            async with session.client("s3") as s3_client:
                 # Upload file with streaming
                 await s3_client.upload_file(
                     str(file_path),
@@ -173,7 +176,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:  # type: ignore
+            async with session.client("s3") as s3_client:
                 # Upload bytes
                 await s3_client.put_object(
                     Bucket=self.bucket_name,
@@ -198,7 +201,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:  # type: ignore
+            async with session.client("s3") as s3_client:
                 await s3_client.head_object(Bucket=self.bucket_name, Key=s3_key)
                 return True
         except Exception:
@@ -214,7 +217,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:  # type: ignore
+            async with session.client("s3") as s3_client:
                 await s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
                 return True
         except Exception:
