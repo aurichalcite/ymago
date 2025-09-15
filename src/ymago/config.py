@@ -247,7 +247,7 @@ async def load_config() -> Settings:
         env_overrides["cloud_storage"] = cloud_storage_overrides
 
     # Webhook configuration from environment
-    webhook_overrides = {}
+    webhook_overrides: dict[str, Any] = {}
 
     webhook_enabled = os.getenv("YMAGO_WEBHOOK_ENABLED")
     if webhook_enabled:

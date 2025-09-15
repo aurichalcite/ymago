@@ -9,7 +9,7 @@ and Cloudflare R2.
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 import aiofiles
@@ -60,6 +60,7 @@ class S3StorageBackend(StorageUploader):
             aws_secret_access_key: AWS secret key (optional, uses IAM if not provided)
             aws_region: AWS region
         """
+        super().__init__(destination_url=destination_url)
         if aioboto3 is None:
             raise ImportError(
                 "AWS S3 support requires 'aioboto3'. "
@@ -81,9 +82,9 @@ class S3StorageBackend(StorageUploader):
         if not self.bucket_name:
             raise ValueError("S3 URL must include bucket name: s3://bucket-name/path/")
 
-    def _get_session_kwargs(self) -> dict:
+    def _get_session_kwargs(self) -> Dict[str, Any]:
         """Get session configuration for aioboto3."""
-        kwargs = {"region_name": self.aws_region}
+        kwargs: Dict[str, Any] = {"region_name": self.aws_region}
 
         if self.aws_access_key_id and self.aws_secret_access_key:
             kwargs.update(
@@ -265,7 +266,7 @@ class R2StorageBackend(S3StorageBackend):
         self.r2_account_id = r2_account_id
         self.endpoint_url = f"https://{r2_account_id}.r2.cloudflarestorage.com"
 
-    def _get_session_kwargs(self) -> dict:
+    def _get_session_kwargs(self) -> Dict[str, Any]:
         """Get session configuration for R2."""
         kwargs = super()._get_session_kwargs()
         kwargs["endpoint_url"] = self.endpoint_url
@@ -281,7 +282,10 @@ class GCSStorageBackend(StorageUploader):
     """
 
     def __init__(
-        self, destination_url: str, service_account_path: Optional[Path] = None
+        self,
+        destination_url: str,
+        service_account_path: Optional[Path] = None,
+        **kwargs: Any,
     ):
         """
         Initialize GCS storage backend.
@@ -290,6 +294,7 @@ class GCSStorageBackend(StorageUploader):
             destination_url: GCS URL (e.g., 'gs://bucket-name/path/')
             service_account_path: Path to service account JSON file (optional)
         """
+        super().__init__(destination_url=destination_url, **kwargs)
         if Storage is None:
             raise ImportError(
                 "Google Cloud Storage support requires 'gcloud-aio-storage'. "
@@ -344,7 +349,7 @@ class GCSStorageBackend(StorageUploader):
 
         try:
             # Initialize storage client
-            storage_kwargs = {}
+            storage_kwargs: Dict[str, Any] = {}
             if self.service_account_path:
                 storage_kwargs["service_file"] = str(self.service_account_path)
 
@@ -392,7 +397,7 @@ class GCSStorageBackend(StorageUploader):
 
         try:
             # Initialize storage client
-            storage_kwargs = {}
+            storage_kwargs: Dict[str, Any] = {}
             if self.service_account_path:
                 storage_kwargs["service_file"] = str(self.service_account_path)
 
@@ -419,7 +424,7 @@ class GCSStorageBackend(StorageUploader):
             return False
 
         try:
-            storage_kwargs = {}
+            storage_kwargs: Dict[str, Any] = {}
             if self.service_account_path:
                 storage_kwargs["service_file"] = str(self.service_account_path)
 
@@ -440,7 +445,7 @@ class GCSStorageBackend(StorageUploader):
             return False
 
         try:
-            storage_kwargs = {}
+            storage_kwargs: Dict[str, Any] = {}
             if self.service_account_path:
                 storage_kwargs["service_file"] = str(self.service_account_path)
 

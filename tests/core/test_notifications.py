@@ -253,8 +253,10 @@ class TestNotificationService:
 
             async with aiohttp.ClientSession() as session:
                 # Create async task
-                task = service.send_notification_async(
-                    session, "https://webhook.example.com/notify", payload
+                task = asyncio.create_task(
+                    service.send_notification(
+                        session, "https://webhook.example.com/notify", payload
+                    )
                 )
 
                 assert isinstance(task, asyncio.Task)

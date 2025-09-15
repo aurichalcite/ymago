@@ -8,7 +8,7 @@ this to support cloud storage providers like AWS S3, Google Cloud Storage, etc.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 from urllib.parse import urlparse
 
 import aiofiles
@@ -44,7 +44,9 @@ class StorageBackendRegistry:
         cls._backends[scheme] = backend_class
 
     @classmethod
-    def create_backend(cls, destination_url: str, **kwargs) -> "StorageUploader":
+    def create_backend(
+        cls, destination_url: str, **kwargs: Any
+    ) -> "StorageUploader":
         """
         Create appropriate backend based on destination URL scheme.
 
@@ -88,6 +90,9 @@ class StorageUploader(ABC):
     backends. Implementations should handle the specifics of each storage type
     while providing a consistent async interface.
     """
+
+    def __init__(self, destination_url: str, **kwargs: Any):
+        self.destination_url = destination_url
 
     @abstractmethod
     async def upload(self, file_path: Path, destination_key: str) -> str:
