@@ -503,7 +503,7 @@ class TestGenerationWithCloudStorage:
             # Verify cloud storage backend was created and used
             mock_registry.create_backend.assert_called_once_with(
                 "gs://test-bucket/uploads/",
-                service_account_path=Path("/path/to/service-account.json"),
+                service_account_path="/path/to/service-account.json",
             )
             mock_backend.upload.assert_called_once()
 
@@ -598,10 +598,10 @@ class TestGenerationWithWebhooks:
             mock_notification_class.assert_called_once_with(
                 timeout_seconds=30, retry_attempts=3, retry_backoff_factor=2.0
             )
-            mock_notification_service.send_notification_async.assert_called_once()
+            mock_notification_service.send_notification.assert_called_once()
 
             # Verify webhook call arguments
-            call_args = mock_notification_service.send_notification_async.call_args
+            call_args = mock_notification_service.send_notification.call_args
             assert call_args[0][0] == mock_session  # session
             assert (
                 call_args[0][1] == "https://webhook.example.com/notify"
@@ -656,10 +656,10 @@ class TestGenerationWithWebhooks:
                 )
 
             # Verify failure notification was sent
-            mock_notification_service.send_notification_async.assert_called_once()
+            mock_notification_service.send_notification.assert_called_once()
 
             # Verify failure webhook call arguments
-            call_args = mock_notification_service.send_notification_async.call_args
+            call_args = mock_notification_service.send_notification.call_args
             payload = call_args[0][2]
             assert payload.job_status == "failure"
             assert payload.error_message == "API error"

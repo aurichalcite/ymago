@@ -156,10 +156,10 @@ class NotificationService:
         """
         try:
             # Update retry configuration based on instance settings
-            self._send_webhook_request.retry.stop = stop_after_attempt(
+            self._send_webhook_request.retry.stop = stop_after_attempt(  # type: ignore[attr-defined]
                 self.retry_attempts
             )
-            self._send_webhook_request.retry.wait = wait_random_exponential(
+            self._send_webhook_request.retry.wait = wait_random_exponential(  # type: ignore[attr-defined]
                 multiplier=self.retry_backoff_factor, max=30
             )
 
@@ -170,26 +170,6 @@ class NotificationService:
             # Log error but don't raise - this is fire-and-forget
             logger.error(f"Failed to send webhook notification to {webhook_url}: {e}")
 
-    def send_notification_async(
-        self, session: aiohttp.ClientSession, webhook_url: str, payload: WebhookPayload
-    ) -> asyncio.Task:
-        """
-        Create an async task for sending webhook notification.
-
-        This is a convenience method that creates the asyncio.Task for
-        fire-and-forget webhook delivery.
-
-        Args:
-            session: aiohttp client session
-            webhook_url: Target webhook URL
-            payload: Webhook payload to send
-
-        Returns:
-            asyncio.Task: Task that can be awaited or ignored
-        """
-        return asyncio.create_task(
-            self.send_notification(session, webhook_url, payload)
-        )
 
 
 def create_success_payload(

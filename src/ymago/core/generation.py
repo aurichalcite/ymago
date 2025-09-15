@@ -139,9 +139,10 @@ async def process_generation_job(
                 )
                 storage_kwargs["aws_region"] = cs_config.aws_region
             elif destination_url.startswith("gs://"):
-                storage_kwargs["service_account_path"] = (
-                    cs_config.gcp_service_account_path
-                )
+                if cs_config.gcp_service_account_path:
+                    storage_kwargs["service_account_path"] = str(
+                        cs_config.gcp_service_account_path
+                    )
             elif destination_url.startswith("r2://"):
                 if not all(
                     [
@@ -231,7 +232,7 @@ async def process_generation_job(
 
             # Send webhook notification (fire-and-forget)
             asyncio.create_task(
-                notification_service.send_notification_async(
+                notification_service.send_notification(
                     session, webhook_url, success_payload
                 )
             )
@@ -291,7 +292,7 @@ async def process_generation_job(
 
                 # Send failure webhook notification (fire-and-forget)
                 asyncio.create_task(
-                    notification_service.send_notification_async(
+                    notification_service.send_notification(
                         session, webhook_url, failure_payload
                     )
                 )
