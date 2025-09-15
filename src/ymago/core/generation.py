@@ -5,6 +5,7 @@ This module coordinates the entire image generation process, from API calls
 to file storage, with comprehensive error handling and cleanup.
 """
 
+import asyncio
 import logging
 import tempfile
 import time
@@ -14,6 +15,7 @@ from typing import Optional
 
 import aiofiles
 import aiofiles.os
+import aiohttp
 
 from ..api import generate_image, generate_video
 from ..config import Settings
@@ -24,7 +26,12 @@ from ..core.io_utils import (
     read_image_from_path,
     write_metadata,
 )
-from ..core.storage import LocalStorageUploader
+from ..core.notifications import (
+    NotificationService,
+    create_failure_payload,
+    create_success_payload,
+)
+from ..core.storage import LocalStorageUploader, StorageBackendRegistry
 from ..models import GenerationJob, GenerationResult
 
 logger = logging.getLogger(__name__)
@@ -43,7 +50,11 @@ class StorageError(Exception):
 
 
 async def process_generation_job(
-    job: GenerationJob, config: Settings
+    job: GenerationJob,
+    config: Settings,
+    destination_url: Optional[str] = None,
+    webhook_url: Optional[str] = None,
+    session: Optional[aiohttp.ClientSession] = None,
 ) -> GenerationResult:
     """
     Process a single generation job from start to finish.
@@ -52,14 +63,18 @@ async def process_generation_job(
     1. Download source image if provided
     2. Generate media using AI API (image or video)
     3. Save to temporary file
-    4. Upload to final storage location
+    4. Upload to final storage location (local or cloud)
     5. Generate metadata sidecar if enabled
-    6. Clean up temporary files
-    7. Return result with metadata
+    6. Send webhook notification if configured
+    7. Clean up temporary files
+    8. Return result with metadata
 
     Args:
         job: The generation job to process
         config: Application configuration
+        destination_url: Optional cloud storage destination URL (e.g., 's3://bucket/path')
+        webhook_url: Optional webhook URL for job completion notifications
+        session: Optional aiohttp session for webhook requests
 
     Returns:
         GenerationResult: Complete result with file path and metadata
@@ -111,9 +126,47 @@ async def process_generation_job(
         final_filename = _generate_filename(job)
 
         # Step 5: Set up storage uploader
-        storage_uploader = LocalStorageUploader(
-            base_directory=config.defaults.output_path, create_dirs=True
-        )
+        if destination_url:
+            # Use cloud storage backend
+            storage_kwargs = {}
+
+            # Add cloud storage credentials based on URL scheme
+            cs_config = config.cloud_storage
+            if destination_url.startswith("s3://"):
+                storage_kwargs["aws_access_key_id"] = cs_config.aws_access_key_id
+                storage_kwargs["aws_secret_access_key"] = (
+                    cs_config.aws_secret_access_key
+                )
+                storage_kwargs["aws_region"] = cs_config.aws_region
+            elif destination_url.startswith("gs://"):
+                if cs_config.gcp_service_account_path:
+                    storage_kwargs["service_account_path"] = str(
+                        cs_config.gcp_service_account_path
+                    )
+            elif destination_url.startswith("r2://"):
+                if not all(
+                    [
+                        cs_config.r2_account_id,
+                        cs_config.r2_access_key_id,
+                        cs_config.r2_secret_access_key,
+                    ]
+                ):
+                    raise StorageError(
+                        "R2 storage requires account_id, access_key_id, "
+                        "and secret_access_key"
+                    )
+                storage_kwargs["r2_account_id"] = cs_config.r2_account_id
+                storage_kwargs["r2_access_key_id"] = cs_config.r2_access_key_id
+                storage_kwargs["r2_secret_access_key"] = cs_config.r2_secret_access_key
+
+            storage_uploader = StorageBackendRegistry.create_backend(
+                destination_url, **storage_kwargs
+            )
+        else:
+            # Use local storage
+            storage_uploader = LocalStorageUploader(
+                base_directory=config.defaults.output_path, create_dirs=True
+            )
 
         # Step 6: Upload to final storage location
         try:
@@ -151,20 +204,54 @@ async def process_generation_job(
                 # Log warning but don't fail the generation
                 logger.warning(f"Failed to write metadata: {e}")
 
-        # Step 9: Create and populate result
+        # Step 9: Send webhook notification if configured
+        job_id = str(uuid.uuid4())
+        processing_time = time.time() - start_time
+
+        if webhook_url and session:
+            # Create notification service
+            notification_service = NotificationService(
+                timeout_seconds=config.webhooks.timeout_seconds,
+                retry_attempts=config.webhooks.retry_attempts,
+                retry_backoff_factor=config.webhooks.retry_backoff_factor,
+            )
+
+            # Create success payload
+            success_payload = create_success_payload(
+                job_id=job_id,
+                output_url=final_path,
+                processing_time_seconds=processing_time,
+                file_size_bytes=file_size,
+                metadata={
+                    "prompt": job.prompt,
+                    "media_type": job.media_type,
+                    "model": job.model_name,
+                    "storage_backend": "cloud" if destination_url else "local",
+                },
+            )
+
+            # Send webhook notification (fire-and-forget)
+            asyncio.create_task(
+                notification_service.send_notification(
+                    session, webhook_url, success_payload
+                )
+            )
+
+        # Step 10: Create and populate result
         result = GenerationResult(
             local_path=Path(final_path),
             job=job,
             file_size_bytes=file_size,
-            generation_time_seconds=time.time() - start_time,
+            generation_time_seconds=processing_time,
             metadata={
                 "api_model": job.model_name,
                 "prompt_length": len(job.prompt),
                 "media_size_bytes": len(media_bytes),
                 "final_filename": final_filename,
-                "storage_backend": "local",
+                "storage_backend": "cloud" if destination_url else "local",
                 "generation_timestamp": time.time(),
                 "media_type": job.media_type,
+                "job_id": job_id,
             },
         )
 
@@ -183,6 +270,36 @@ async def process_generation_job(
         return result
 
     except Exception as e:
+        # Send failure webhook notification if configured
+        if webhook_url and session:
+            try:
+                notification_service = NotificationService(
+                    timeout_seconds=config.webhooks.timeout_seconds,
+                    retry_attempts=config.webhooks.retry_attempts,
+                    retry_backoff_factor=config.webhooks.retry_backoff_factor,
+                )
+
+                failure_payload = create_failure_payload(
+                    job_id=str(uuid.uuid4()),
+                    error_message=str(e),
+                    processing_time_seconds=time.time() - start_time,
+                    metadata={
+                        "prompt": job.prompt,
+                        "media_type": job.media_type,
+                        "model": job.model_name,
+                    },
+                )
+
+                # Send failure webhook notification (fire-and-forget)
+                asyncio.create_task(
+                    notification_service.send_notification(
+                        session, webhook_url, failure_payload
+                    )
+                )
+            except Exception as webhook_error:
+                # Log webhook error but don't fail the main exception
+                logger.warning(f"Failed to send failure webhook: {webhook_error}")
+
         # Wrap non-generation errors appropriately
         if isinstance(e, (GenerationError, StorageError)):
             raise
