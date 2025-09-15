@@ -58,6 +58,10 @@ dev = [
     "bandit>=1.8.6",
     "tomli>=2.2.1",
     "pydantic>=2.0,<3.0",
+    "aioboto3>=13.2.0",
+    "mypy-boto3-s3>=1.28.0",
+    "gcloud-aio-storage>=9.3.0",
+    "aioresponses>=0.7.6",
 ]
 docs = [
     "sphinx>=8.0.0",
@@ -67,7 +71,6 @@ docs = [
     "sphinxcontrib-mermaid>=1.0.0",
 ]
 test = [
-    "aioresponses>=0.7.6",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=7.0.0",
@@ -144,11 +147,11 @@ ignore_missing_imports = true
 [tool.basedpyright]
 pythonVersion = "3.10"
 typeCheckingMode = "standard"
+reportMissingTypeStubs = false
 pythonPlatform = "All"
 include = ["src", "tests"]
 exclude = [".venv", "build", "dist", ".mypy_cache", ".pytest_cache", ".ruff_cache"]
 reportMissingImports = true
-reportMissingTypeStubs = true
 reportUnusedImport = true
 reportUnusedClass = true
 reportUnusedFunction = true

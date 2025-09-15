@@ -338,7 +338,9 @@ StorageBackendRegistry.register("file", LocalStorageUploader)
 
 # Import cloud storage backends to register them
 try:
-    from . import cloud_storage  # noqa: F401
+    from . import cloud_storage
+
+    _ = cloud_storage  # Mark as used to avoid unused import errors
 except ImportError:
     # Cloud storage dependencies not available
     pass
