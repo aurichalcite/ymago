@@ -149,14 +149,16 @@ class TestExtendedSettings:
 
     def test_settings_with_cloud_storage_and_webhooks(self):
         """Test settings model with cloud storage and webhook configs."""
+        from ymago.config import Auth, CloudStorageConfig, WebhookConfig
+
         settings = Settings(
-            auth={"google_api_key": "test-key"},
-            cloud_storage={
-                "aws_access_key_id": "AKIATEST123",
-                "aws_secret_access_key": "secret123",
-                "aws_region": "us-west-2",
-            },
-            webhooks={"enabled": True, "timeout_seconds": 45, "retry_attempts": 4},
+            auth=Auth(google_api_key="test-key"),
+            cloud_storage=CloudStorageConfig(
+                aws_access_key_id="AKIATEST123",
+                aws_secret_access_key="secret123",
+                aws_region="us-west-2",
+            ),
+            webhooks=WebhookConfig(enabled=True, timeout_seconds=45, retry_attempts=4),
         )
 
         assert settings.auth.google_api_key == "test-key"
@@ -169,7 +171,9 @@ class TestExtendedSettings:
 
     def test_settings_with_defaults(self):
         """Test settings model with default cloud storage and webhook configs."""
-        settings = Settings(auth={"google_api_key": "test-key"})
+        from ymago.config import Auth
+
+        settings = Settings(auth=Auth(google_api_key="test-key"))
 
         # Should have default cloud storage config
         assert settings.cloud_storage.aws_access_key_id is None

@@ -6,6 +6,7 @@ and webhook notifications added in Milestone 4.
 """
 
 from pathlib import Path
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -15,6 +16,8 @@ from ymago.cli import app
 
 class TestCLICloudStorageOptions:
     """Test CLI cloud storage destination options."""
+
+    runner: Optional[CliRunner] = None
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -45,6 +48,7 @@ class TestCLICloudStorageOptions:
         mock_process_job.return_value = mock_result
 
         # Run CLI command
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -86,6 +90,7 @@ class TestCLICloudStorageOptions:
         mock_process_job.return_value = mock_result
 
         # Run CLI command
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -127,6 +132,7 @@ class TestCLICloudStorageOptions:
         mock_process_job.return_value = mock_result
 
         # Run CLI command
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -147,6 +153,7 @@ class TestCLICloudStorageOptions:
 
     def test_invalid_destination_url_scheme(self):
         """Test CLI validation of invalid destination URL scheme."""
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -163,6 +170,7 @@ class TestCLICloudStorageOptions:
 
     def test_invalid_destination_url_format(self):
         """Test CLI validation of invalid destination URL format."""
+        assert self.runner is not None
         result = self.runner.invoke(
             app, ["image", "generate", "test prompt", "--destination", "not-a-url"]
         )
@@ -196,6 +204,7 @@ class TestCLICloudStorageOptions:
         mock_process_job.return_value = mock_result
 
         # Run CLI command with both options
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -250,6 +259,8 @@ class TestCLIValidationFunctions:
 class TestCLIErrorHandling:
     """Test CLI error handling for cloud storage and webhook failures."""
 
+    runner: Optional[CliRunner] = None
+
     def setup_method(self):
         """Set up test fixtures."""
         self.runner = CliRunner()
@@ -271,6 +282,7 @@ class TestCLIErrorHandling:
         mock_process_job.side_effect = StorageError("Failed to upload to S3")
 
         # Run CLI command
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -304,6 +316,7 @@ class TestCLIErrorHandling:
         )
 
         # Run CLI command
+        assert self.runner is not None
         result = self.runner.invoke(
             app,
             [
@@ -322,12 +335,15 @@ class TestCLIErrorHandling:
 class TestCLIHelpText:
     """Test CLI help text includes new options."""
 
+    runner: Optional[CliRunner] = None
+
     def setup_method(self):
         """Set up test fixtures."""
         self.runner = CliRunner()
 
     def test_image_generate_help_includes_new_options(self):
         """Test that image generate help includes destination and webhook options."""
+        assert self.runner is not None
         result = self.runner.invoke(app, ["image", "generate", "--help"])
 
         assert result.exit_code == 0
@@ -339,6 +355,7 @@ class TestCLIHelpText:
 
     def test_video_generate_help_includes_new_options(self):
         """Test that video generate help includes destination and webhook options."""
+        assert self.runner is not None
         result = self.runner.invoke(app, ["video", "generate", "--help"])
 
         assert result.exit_code == 0
@@ -350,6 +367,7 @@ class TestCLIHelpText:
 
     def test_help_shows_example_usage(self):
         """Test that help text shows example usage of new options."""
+        assert self.runner is not None
         result = self.runner.invoke(app, ["image", "generate", "--help"])
 
         assert result.exit_code == 0

@@ -128,7 +128,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:
+            async with session.client("s3") as s3_client:  # type: ignore
                 # Upload file with streaming
                 await s3_client.upload_file(
                     str(file_path),
@@ -173,7 +173,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:
+            async with session.client("s3") as s3_client:  # type: ignore
                 # Upload bytes
                 await s3_client.put_object(
                     Bucket=self.bucket_name,
@@ -198,7 +198,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:
+            async with session.client("s3") as s3_client:  # type: ignore
                 await s3_client.head_object(Bucket=self.bucket_name, Key=s3_key)
                 return True
         except Exception:
@@ -214,7 +214,7 @@ class S3StorageBackend(StorageUploader):
         session = aioboto3.Session(**self._get_session_kwargs())
 
         try:
-            async with session.client("s3") as s3_client:
+            async with session.client("s3") as s3_client:  # type: ignore
                 await s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
                 return True
         except Exception:

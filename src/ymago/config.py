@@ -12,6 +12,8 @@ from typing import Any, Optional
 import tomli
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Import cloud storage backends to register them
+
 
 class Auth(BaseModel):
     """Authentication configuration for AI services."""
