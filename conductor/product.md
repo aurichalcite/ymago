@@ -17,6 +17,7 @@ ymago is a high-performance, asynchronous command-line toolkit and Python librar
 - **High Performance/Scalability:** An asynchronous-first architecture (aiohttp, asyncio) that maximizes throughput and efficiency.
 - **Reliability & Reproducibility:** Consistent generation results through metadata embedding and sidecar files, coupled with robust error handling.
 - **Seamless Cloud Integration:** Native support for uploading generated assets directly to AWS S3, Google Cloud Storage, and Cloudflare R2, with webhook notification support.
+- **Distributed Execution:** Instantly offload thousands of jobs to a managed cloud queue (Google Cloud Tasks) for massive scalability.
 
 ## Core Features
 - **Advanced Batch Processing:** Support for managing and executing hundreds of generation jobs concurrently via CSV or JSONL input files.
@@ -24,6 +25,7 @@ ymago is a high-performance, asynchronous command-line toolkit and Python librar
 - **Composable Python Library:** A well-structured API that allows the core generation engine to be easily imported and used in custom Python projects.
 - **Multi-Modal Generation:** Native support for both image and video creation with fine-grained control over model parameters (seed, negative prompts, aspect ratio, etc.).
 - **Rich Interactive UI:** A modern CLI experience featuring progress bars, status spinners, and formatted terminal output.
+- **Pluggable Backends:** Support for multiple execution backends, including local execution and Google Cloud Tasks for distributed generation.
 
 ## Technical Constraints
 - **Python Version Compatibility:** The project strictly targets Python 3.10 and newer environments.
@@ -31,6 +33,5 @@ ymago is a high-performance, asynchronous command-line toolkit and Python librar
 - **Strict Static Typing:** Full adherence to strict `mypy` and `basedpyright` type-checking rules to ensure code quality and maintainability.
 
 ## Future Roadmap
-- **Pluggable Backends:** Integration of Google Cloud Tasks and other distributed queue systems (e.g., Celery).
 - **Serverless Workers:** Execution of generation tasks via scalable, serverless platforms like Google Cloud Run or AWS Lambda.
 - **Decoupled Architecture:** A fully distributed, resilient pipeline integrating task queues, workers, cloud storage, and webhooks.

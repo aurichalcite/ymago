@@ -9,6 +9,7 @@
 - **Asynchronous HTTP:** **aiohttp** for non-blocking, concurrent API interactions.
 - **Generative AI:** **google-genai** for direct integration with Google's Gemini models (Nano Banana, Veo).
 - **Resilience:** **Tenacity** for automated retries with exponential backoff for handling transient network and API failures.
+- **Distributed Tasks:** **google-cloud-tasks** and **google-auth** for dispatching generation jobs to managed cloud queues.
 
 ## Infrastructure & Cloud
 - **Cloud Storage Integration:**
