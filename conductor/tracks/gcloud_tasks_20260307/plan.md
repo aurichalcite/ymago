@@ -19,9 +19,9 @@ Implement the logic to create tasks in the GCT queue and serialize the job paylo
 - [x] Task: Implement `submit(jobs)` method. [fe61689]
     - [x] Write tests for submitting multiple jobs.
     - [x] Implement dispatching logic with OIDC authentication support.
-- [ ] Task: Implement `process_batch(...)` method.
-    - [ ] Write tests for batch processing with the cloud backend.
-    - [ ] Implement asynchronous generator consumption and task dispatching.
+- [x] Task: Implement `process_batch(...)` method. [28f8483]
+    - [x] Write tests for batch processing with the cloud backend.
+    - [x] Implement asynchronous generator consumption and task dispatching.
 - [ ] Task: Conductor - User Manual Verification 'Task Dispatching Implementation' (Protocol in workflow.md)
 
 ## Phase 3: CLI Integration & Final Verification
