@@ -1,6 +1,6 @@
 # Implementation Plan: Google Cloud Tasks Backend
 
-## Phase 1: Infrastructure & Configuration
+## Phase 1: Infrastructure & Configuration [checkpoint: c3ef52a]
 Implement the configuration schema and the basic skeleton of the `CloudTasksExecutionBackend`.
 
 - [x] Task: Define `CloudTasksConfig` in `src/ymago/config.py`. [f95084e]
