@@ -13,9 +13,9 @@ Implement the configuration schema and the basic skeleton of the `CloudTasksExec
 ## Phase 2: Task Dispatching Implementation
 Implement the logic to create tasks in the GCT queue and serialize the job payload.
 
-- [ ] Task: Integrate `google-cloud-tasks` client.
-    - [ ] Write tests for task payload serialization.
-    - [ ] Implement `_create_gct_task` helper method in `CloudTasksExecutionBackend`.
+- [x] Task: Integrate `google-cloud-tasks` client. [48afbf2]
+    - [x] Write tests for task payload serialization.
+    - [x] Implement `_create_gct_task` helper method in `CloudTasksExecutionBackend`.
 - [ ] Task: Implement `submit(jobs)` method.
     - [ ] Write tests for submitting multiple jobs.
     - [ ] Implement dispatching logic with OIDC authentication support.
