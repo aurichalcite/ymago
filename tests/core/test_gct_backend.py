@@ -83,3 +83,66 @@ class TestCloudTasksExecutionBackendSkeleton:
         from ymago.models import BatchSummary
         assert isinstance(summary, BatchSummary)
         assert summary.total_requests == 0
+
+    def test_payload_serialization(self):
+        """Test serialization of GenerationJob to JSON payload for GCT."""
+        from ymago.models import GenerationJob
+        config = Settings(auth=Auth(google_api_key="test-key"))
+        backend = CloudTasksExecutionBackend(config)
+        
+        job = GenerationJob(
+            prompt="A beautiful sunset",
+            image_model="gemini-2.5-flash-image-preview",
+            aspect_ratio="16:9",
+            destination="gs://my-bucket/output.png",
+            webhook_url="https://api.example.com/webhook"
+        )
+        
+        payload = backend._serialize_job(job)
+        import json
+        data = json.loads(payload)
+        
+        assert data["prompt"] == "A beautiful sunset"
+        assert data["image_model"] == "gemini-2.5-flash-image-preview"
+        assert data["aspect_ratio"] == "16:9"
+        assert data["destination"] == "gs://my-bucket/output.png"
+        assert data["webhook_url"] == "https://api.example.com/webhook"
+        assert "request_id" in data
+
+    @pytest.mark.asyncio
+    async def test_create_gct_task_calls_client(self):
+        """Test that _create_gct_task calls the GCT client correctly."""
+        from unittest.mock import MagicMock, patch
+        from ymago.models import GenerationJob
+        
+        config = Settings(
+            auth=Auth(google_api_key="test-key"),
+            cloud_tasks=CloudTasksConfig(
+                gct_project_id="test-project",
+                gct_location="us-central1",
+                gct_queue_name="test-queue",
+                worker_url="https://worker.com",
+                service_account_email="sa@example.com"
+            )
+        )
+        backend = CloudTasksExecutionBackend(config)
+        
+        job = GenerationJob(prompt="Test")
+        
+        mock_client = MagicMock()
+        mock_client.queue_path.return_value = "projects/test-project/locations/us-central1/queues/test-queue"
+        backend._client = mock_client
+        
+        with patch.object(backend, "_serialize_job", return_value='{"test": "data"}'):
+            await backend._create_gct_task(job)
+            
+            mock_client.create_task.assert_called_once()
+            _, kwargs = mock_client.create_task.call_args
+            request = kwargs.get("request")
+            parent = request["parent"]
+            task = request["task"]
+            
+            assert "projects/test-project/locations/us-central1/queues/test-queue" in str(parent)
+            assert task["http_request"]["url"] == "https://worker.com"
+            assert task["http_request"]["body"] == b'{"test": "data"}'
+            assert task["http_request"]["oidc_token"]["service_account_email"] == "sa@example.com"

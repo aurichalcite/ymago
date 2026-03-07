@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Callable, List, Set
@@ -472,6 +473,70 @@ class CloudTasksExecutionBackend(ExecutionBackend):
         self.location = self.gct_config.gct_location
         self.queue_name = self.gct_config.gct_queue_name
         self.worker_url = self.gct_config.worker_url
+
+        # Initialize client lazily or on demand
+        self._client: Any = None
+
+    @property
+    def client(self) -> Any:
+        """Get or initialize the Google Cloud Tasks client."""
+        if self._client is None:
+            from google.cloud import tasks_v2
+
+            self._client = tasks_v2.CloudTasksClient()
+        return self._client
+
+    def _serialize_job(self, job: GenerationJob) -> str:
+        """
+        Serialize a GenerationJob into a JSON payload for Cloud Tasks.
+
+        Args:
+            job: The generation job to serialize
+
+        Returns:
+            str: JSON string payload
+        """
+        # Add a request_id if not already present in metadata or somewhere
+        payload = job.model_dump(mode="json")
+        if "request_id" not in payload:
+            payload["request_id"] = str(uuid.uuid4())
+        return json.dumps(payload)
+
+    async def _create_gct_task(self, job: GenerationJob) -> Any:
+        """
+        Internal helper to create a single task in GCT.
+
+        Args:
+            job: The generation job to dispatch
+        """
+        if not self.project_id or not self.worker_url:
+            raise ValueError(
+                "Cloud Tasks backend requires gct_project_id and worker_url"
+            )
+
+        parent = self.client.queue_path(self.project_id, self.location, self.queue_name)
+        payload = self._serialize_job(job)
+
+        task: dict[str, Any] = {
+            "http_request": {
+                "http_method": "POST",
+                "url": self.worker_url,
+                "headers": {"Content-Type": "application/json"},
+                "body": payload.encode(),
+            }
+        }
+
+        # Add OIDC authentication if service account is provided
+        if self.gct_config.service_account_email:
+            task["http_request"]["oidc_token"] = {
+                "service_account_email": self.gct_config.service_account_email
+            }
+
+        # Dispatch the task
+        # Note: create_task is a synchronous call in the standard client,
+        # but we can wrap it or use a thread pool if needed.
+        # For now, we'll call it directly as a placeholder.
+        return self.client.create_task(request={"parent": parent, "task": task})
 
     async def submit(self, jobs: List[GenerationJob]) -> List[GenerationResult]:
         """
