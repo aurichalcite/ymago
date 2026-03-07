@@ -450,6 +450,87 @@ class LocalExecutionBackend(ExecutionBackend):
             logger.error(f"Failed to write checkpoint: {e}")
 
 
+class CloudTasksExecutionBackend(ExecutionBackend):
+    """
+    Google Cloud Tasks execution backend implementation.
+
+    This backend dispatches generation jobs to a Google Cloud Tasks queue,
+    which then calls a worker endpoint to process the jobs. This allows for
+    highly distributed and scalable execution.
+    """
+
+    def __init__(self, config: Settings):
+        """
+        Initialize the Google Cloud Tasks backend.
+
+        Args:
+            config: Validated configuration settings
+        """
+        self.config = config
+        self.gct_config = config.cloud_tasks
+        self.project_id = self.gct_config.gct_project_id
+        self.location = self.gct_config.gct_location
+        self.queue_name = self.gct_config.gct_queue_name
+        self.worker_url = self.gct_config.worker_url
+
+    async def submit(self, jobs: List[GenerationJob]) -> List[GenerationResult]:
+        """
+        Submit generation jobs to Google Cloud Tasks.
+
+        Args:
+            jobs: List of generation jobs to execute
+
+        Returns:
+            List[GenerationResult]: Placeholder results for asynchronous execution
+        """
+        # TODO: Implement task creation logic in Phase 2
+        return []
+
+    async def process_batch(
+        self,
+        requests: AsyncGenerator[GenerationRequest, None],
+        output_dir: Path,
+        concurrency: int,
+        rate_limit: int,
+        resume: bool = False,
+    ) -> BatchSummary:
+        """
+        Process a batch of requests by dispatching them to Cloud Tasks.
+
+        Args:
+            requests: Async generator of generation requests
+            output_dir: Directory for output files (may be less relevant for cloud)
+            concurrency: Maximum number of concurrent requests (controlled by queue)
+            rate_limit: Maximum requests per minute (controlled by queue)
+            resume: Whether to resume from existing checkpoint
+
+        Returns:
+            BatchSummary: Summary of dispatched jobs
+        """
+        # TODO: Implement batch dispatching logic in Phase 2
+        return BatchSummary(
+            total_requests=0,
+            successful=0,
+            failed=0,
+            skipped=0,
+            processing_time_seconds=0.0,
+            results_log_path=str(output_dir / "_cloud_batch_state.jsonl"),
+            throughput_requests_per_minute=0.0,
+            start_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            end_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+
+    async def get_status(self) -> dict[str, Any]:
+        """Get the current status of the Cloud Tasks backend."""
+        return {
+            "backend_type": "cloud-tasks",
+            "project_id": self.project_id,
+            "location": self.location,
+            "queue_name": self.queue_name,
+            "worker_url": self.worker_url,
+        }
+
+
 class TokenBucketRateLimiter:
     """Token bucket rate limiter for controlling request rate."""
 
