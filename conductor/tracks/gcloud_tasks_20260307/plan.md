@@ -35,4 +35,4 @@ Update the CLI to allow selecting the new backend and perform final validation.
     - [x] Verify full flow from CLI to mock task creation.
 - [x] Task: Update documentation. [167d706]
     - [x] Add GCT setup guide to `README.md` or a new documentation file.
-- [ ] Task: Conductor - User Manual Verification 'CLI Integration & Final Verification' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'CLI Integration & Final Verification' (Protocol in workflow.md) [17f51fc]
