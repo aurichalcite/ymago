@@ -58,12 +58,12 @@ class TestCloudTasksExecutionBackendSkeleton:
         assert status["backend_type"] == "cloud-tasks"
 
     @pytest.mark.asyncio
-    async def test_submit_returns_empty_list_as_stub(self):
-        """Test that submit stub returns an empty list."""
+    async def test_submit_raises_error_if_empty(self):
+        """Test that submit raises ValueError if jobs list is empty."""
         config = Settings(auth=Auth(google_api_key="test-key"))
         backend = CloudTasksExecutionBackend(config)
-        results = await backend.submit([])
-        assert results == []
+        with pytest.raises(ValueError, match="Jobs list cannot be empty"):
+            await backend.submit([])
 
     @pytest.mark.asyncio
     async def test_process_batch_returns_summary_as_stub(self, tmp_path):
@@ -146,3 +146,26 @@ class TestCloudTasksExecutionBackendSkeleton:
             assert task["http_request"]["url"] == "https://worker.com"
             assert task["http_request"]["body"] == b'{"test": "data"}'
             assert task["http_request"]["oidc_token"]["service_account_email"] == "sa@example.com"
+
+    @pytest.mark.asyncio
+    async def test_submit_calls_create_task_per_job(self):
+        """Test that submit dispatches a task for each job."""
+        from unittest.mock import patch, AsyncMock
+        from ymago.models import GenerationJob
+        from pathlib import Path
+        
+        config = Settings(auth=Auth(google_api_key="test-key"))
+        backend = CloudTasksExecutionBackend(config)
+        
+        jobs = [
+            GenerationJob(prompt="Job 1"),
+            GenerationJob(prompt="Job 2"),
+        ]
+        
+        with patch.object(backend, "_create_gct_task", new_callable=AsyncMock) as mock_create:
+            results = await backend.submit(jobs)
+            
+            assert mock_create.call_count == 2
+            assert len(results) == 2
+            assert all(r.get_metadata("execution_backend") == "cloud-tasks" for r in results)
+            assert all(r.local_path == Path("cloud-task-dispatched").resolve() for r in results)

@@ -548,8 +548,22 @@ class CloudTasksExecutionBackend(ExecutionBackend):
         Returns:
             List[GenerationResult]: Placeholder results for asynchronous execution
         """
-        # TODO: Implement task creation logic in Phase 2
-        return []
+        if not jobs:
+            raise ValueError("Jobs list cannot be empty")
+
+        results = []
+        for job in jobs:
+            await self._create_gct_task(job)
+
+            # Create a placeholder result since execution is asynchronous
+            result = GenerationResult(
+                local_path=Path("cloud-task-dispatched"),
+                job=job,
+                metadata={"execution_backend": "cloud-tasks"},
+            )
+            results.append(result)
+
+        return results
 
     async def process_batch(
         self,
