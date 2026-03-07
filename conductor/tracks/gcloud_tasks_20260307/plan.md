@@ -30,9 +30,9 @@ Update the CLI to allow selecting the new backend and perform final validation.
 - [x] Task: Update CLI to support `--backend cloud-tasks`. [44f8e1f]
     - [ ] Modify `src/ymago/cli.py` to handle backend selection.
     - [ ] Update `src/ymago/core/backends.py` factory function (if one exists) or logic.
-- [ ] Task: Integration tests with Mock GCT Client.
-    - [ ] Create `tests/core/test_gct_backend.py`.
-    - [ ] Verify full flow from CLI to mock task creation.
+- [x] Task: Integration tests with Mock GCT Client. [108e191]
+    - [x] Create `tests/integration/test_gct_integration.py`.
+    - [x] Verify full flow from CLI to mock task creation.
 - [ ] Task: Update documentation.
     - [ ] Add GCT setup guide to `README.md` or a new documentation file.
 - [ ] Task: Conductor - User Manual Verification 'CLI Integration & Final Verification' (Protocol in workflow.md)
