@@ -22,7 +22,7 @@ Implement the logic to create tasks in the GCT queue and serialize the job paylo
 - [x] Task: Implement `process_batch(...)` method. [28f8483]
     - [x] Write tests for batch processing with the cloud backend.
     - [x] Implement asynchronous generator consumption and task dispatching.
-- [ ] Task: Conductor - User Manual Verification 'Task Dispatching Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Task Dispatching Implementation' (Protocol in workflow.md) [913e4b2]
 
 ## Phase 3: CLI Integration & Final Verification
 Update the CLI to allow selecting the new backend and perform final validation.
