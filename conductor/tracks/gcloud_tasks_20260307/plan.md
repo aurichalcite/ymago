@@ -24,7 +24,7 @@ Implement the logic to create tasks in the GCT queue and serialize the job paylo
     - [x] Implement asynchronous generator consumption and task dispatching.
 - [x] Task: Conductor - User Manual Verification 'Task Dispatching Implementation' (Protocol in workflow.md) [913e4b2]
 
-## Phase 3: CLI Integration & Final Verification
+## Phase 3: CLI Integration & Final Verification [checkpoint: e355c02]
 Update the CLI to allow selecting the new backend and perform final validation.
 
 - [x] Task: Update CLI to support `--backend cloud-tasks`. [44f8e1f]
