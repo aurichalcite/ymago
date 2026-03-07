@@ -27,7 +27,7 @@ Implement the logic to create tasks in the GCT queue and serialize the job paylo
 ## Phase 3: CLI Integration & Final Verification
 Update the CLI to allow selecting the new backend and perform final validation.
 
-- [ ] Task: Update CLI to support `--backend cloud-tasks`.
+- [x] Task: Update CLI to support `--backend cloud-tasks`. [44f8e1f]
     - [ ] Modify `src/ymago/cli.py` to handle backend selection.
     - [ ] Update `src/ymago/core/backends.py` factory function (if one exists) or logic.
 - [ ] Task: Integration tests with Mock GCT Client.
