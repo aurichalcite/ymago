@@ -3,7 +3,7 @@
 ## Phase 1: Infrastructure & Configuration
 Implement the configuration schema and the basic skeleton of the `CloudTasksExecutionBackend`.
 
-- [ ] Task: Define `CloudTasksConfig` in `src/ymago/config.py`.
+- [x] Task: Define `CloudTasksConfig` in `src/ymago/config.py`. [f95084e]
     - [ ] Add `gct_project_id`, `gct_location`, `gct_queue_name`, `worker_url`, `service_account_email` fields.
 - [ ] Task: Implement `CloudTasksExecutionBackend` skeleton in `src/ymago/core/backends.py`.
     - [ ] Inherit from `ExecutionBackend`.
