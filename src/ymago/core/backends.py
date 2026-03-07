@@ -586,17 +586,55 @@ class CloudTasksExecutionBackend(ExecutionBackend):
         Returns:
             BatchSummary: Summary of dispatched jobs
         """
-        # TODO: Implement batch dispatching logic in Phase 2
+        start_time = time.time()
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        total_requests = 0
+        successful = 0
+        failed = 0
+
+        # We can use a semaphore here too to control the dispatch rate,
+        # but Cloud Tasks queue settings also handle this.
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def dispatch_single(request: GenerationRequest) -> bool:
+            nonlocal successful, failed
+            async with semaphore:
+                try:
+                    job = request.to_generation_job()
+                    await self._create_gct_task(job)
+                    successful += 1
+                    return True
+                except Exception as e:
+                    logger.error(f"Failed to dispatch request {request.id}: {e}")
+                    failed += 1
+                    return False
+
+        # Consume the generator and dispatch
+        tasks = []
+        async for request in requests:
+            total_requests += 1
+            tasks.append(dispatch_single(request))
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+        end_time = time.time()
+        processing_time = end_time - start_time
+
         return BatchSummary(
-            total_requests=0,
-            successful=0,
-            failed=0,
+            total_requests=total_requests,
+            successful=successful,
+            failed=failed,
             skipped=0,
-            processing_time_seconds=0.0,
+            processing_time_seconds=processing_time,
             results_log_path=str(output_dir / "_cloud_batch_state.jsonl"),
-            throughput_requests_per_minute=0.0,
-            start_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            end_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            throughput_requests_per_minute=(
+                (total_requests / processing_time * 60) if processing_time > 0 else 0
+            ),
+            start_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(start_time)),
+            end_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(end_time)),
         )
 
     async def get_status(self) -> dict[str, Any]:

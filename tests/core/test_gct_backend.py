@@ -72,7 +72,9 @@ class TestCloudTasksExecutionBackendSkeleton:
         backend = CloudTasksExecutionBackend(config)
         
         async def mock_requests():
-            yield None # type: ignore
+            if False:
+                yield None # type: ignore
+            return
             
         summary = await backend.process_batch(
             mock_requests(),
@@ -169,3 +171,30 @@ class TestCloudTasksExecutionBackendSkeleton:
             assert len(results) == 2
             assert all(r.get_metadata("execution_backend") == "cloud-tasks" for r in results)
             assert all(r.local_path == Path("cloud-task-dispatched").resolve() for r in results)
+
+    @pytest.mark.asyncio
+    async def test_process_batch_dispatches_all_requests(self, tmp_path):
+        """Test that process_batch dispatches all requests from generator."""
+        from unittest.mock import patch, AsyncMock
+        from ymago.models import GenerationRequest, BatchSummary
+        
+        config = Settings(auth=Auth(google_api_key="test-key"))
+        backend = CloudTasksExecutionBackend(config)
+        
+        async def mock_requests():
+            yield GenerationRequest(prompt="Req 1")
+            yield GenerationRequest(prompt="Req 2")
+            yield GenerationRequest(prompt="Req 3")
+            
+        with patch.object(backend, "_create_gct_task", new_callable=AsyncMock) as mock_create:
+            summary = await backend.process_batch(
+                mock_requests(),
+                output_dir=tmp_path,
+                concurrency=5,
+                rate_limit=60
+            )
+            
+            assert mock_create.call_count == 3
+            assert summary.total_requests == 3
+            assert summary.successful == 3
+            assert summary.failed == 0
