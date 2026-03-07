@@ -16,9 +16,9 @@ Implement the logic to create tasks in the GCT queue and serialize the job paylo
 - [x] Task: Integrate `google-cloud-tasks` client. [48afbf2]
     - [x] Write tests for task payload serialization.
     - [x] Implement `_create_gct_task` helper method in `CloudTasksExecutionBackend`.
-- [ ] Task: Implement `submit(jobs)` method.
-    - [ ] Write tests for submitting multiple jobs.
-    - [ ] Implement dispatching logic with OIDC authentication support.
+- [x] Task: Implement `submit(jobs)` method. [fe61689]
+    - [x] Write tests for submitting multiple jobs.
+    - [x] Implement dispatching logic with OIDC authentication support.
 - [ ] Task: Implement `process_batch(...)` method.
     - [ ] Write tests for batch processing with the cloud backend.
     - [ ] Implement asynchronous generator consumption and task dispatching.
