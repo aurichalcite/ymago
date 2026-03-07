@@ -33,6 +33,6 @@ Update the CLI to allow selecting the new backend and perform final validation.
 - [x] Task: Integration tests with Mock GCT Client. [108e191]
     - [x] Create `tests/integration/test_gct_integration.py`.
     - [x] Verify full flow from CLI to mock task creation.
-- [ ] Task: Update documentation.
-    - [ ] Add GCT setup guide to `README.md` or a new documentation file.
+- [x] Task: Update documentation. [167d706]
+    - [x] Add GCT setup guide to `README.md` or a new documentation file.
 - [ ] Task: Conductor - User Manual Verification 'CLI Integration & Final Verification' (Protocol in workflow.md)
