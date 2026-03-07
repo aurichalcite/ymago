@@ -3,9 +3,11 @@ Tests for Google Cloud Tasks configuration.
 """
 
 import os
-import pytest
-from ymago.config import Settings, load_config
 from unittest.mock import patch
+
+import pytest
+
+from ymago.config import Settings, load_config
 
 try:
     from ymago.config import CloudTasksConfig
@@ -36,13 +38,16 @@ class TestCloudTasksConfig:
             gct_location="europe-west1",
             gct_queue_name="custom-queue",
             worker_url="https://worker.example.com",
-            service_account_email="worker@test-project.iam.gserviceaccount.com"
+            service_account_email="worker@test-project.iam.gserviceaccount.com",
         )
         assert config.gct_project_id == "test-project"
         assert config.gct_location == "europe-west1"
         assert config.gct_queue_name == "custom-queue"
         assert config.worker_url == "https://worker.example.com"
-        assert config.service_account_email == "worker@test-project.iam.gserviceaccount.com"
+        assert (
+            config.service_account_email
+            == "worker@test-project.iam.gserviceaccount.com"
+        )
 
 
 class TestGCTSettings:
@@ -51,6 +56,7 @@ class TestGCTSettings:
     def test_settings_has_cloud_tasks(self):
         """Test that Settings model has a cloud_tasks field."""
         from ymago.config import Auth
+
         settings = Settings(auth=Auth(google_api_key="test-key"))
         assert hasattr(settings, "cloud_tasks")
         assert isinstance(settings.cloud_tasks, CloudTasksConfig)

@@ -217,13 +217,13 @@ class TestBatchCLI:
                 )
 
                 with patch("ymago.cli.load_config") as mock_config:
-                    with patch("ymago.cli.LocalExecutionBackend") as mock_backend_class:
+                    with patch("ymago.cli.get_backend") as mock_get_backend:
                         mock_config.return_value = MagicMock()
                         mock_backend = MagicMock()
                         mock_backend.process_batch = AsyncMock(
                             return_value=mock_summary
                         )
-                        mock_backend_class.return_value = mock_backend
+                        mock_get_backend.return_value = mock_backend
 
                         result = runner.invoke(
                             app,
@@ -272,13 +272,13 @@ class TestBatchCLI:
                 )
 
                 with patch("ymago.cli.load_config") as mock_config:
-                    with patch("ymago.cli.LocalExecutionBackend") as mock_backend_class:
+                    with patch("ymago.cli.get_backend") as mock_get_backend:
                         mock_config.return_value = MagicMock()
                         mock_backend = MagicMock()
                         mock_backend.process_batch = AsyncMock(
                             return_value=mock_summary
                         )
-                        mock_backend_class.return_value = mock_backend
+                        mock_get_backend.return_value = mock_backend
 
                         result = runner.invoke(
                             app,
@@ -355,13 +355,13 @@ class TestBatchCLI:
         with tempfile.TemporaryDirectory() as temp_dir:
             try:
                 with patch("ymago.cli.load_config") as mock_config:
-                    with patch("ymago.cli.LocalExecutionBackend") as mock_backend_class:
+                    with patch("ymago.cli.get_backend") as mock_get_backend:
                         mock_config.return_value = MagicMock()
                         mock_backend = MagicMock()
                         mock_backend.process_batch = AsyncMock(
                             side_effect=KeyboardInterrupt()
                         )
-                        mock_backend_class.return_value = mock_backend
+                        mock_get_backend.return_value = mock_backend
 
                         result = runner.invoke(
                             app,

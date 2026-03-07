@@ -25,7 +25,11 @@ from rich.status import Status
 from rich.table import Table
 
 from .config import load_config
-from .core.backends import CloudTasksExecutionBackend, LocalExecutionBackend
+from .core.backends import (
+    CloudTasksExecutionBackend,
+    LocalExecutionBackend,
+    get_backend,
+)
 from .core.batch_parser import parse_batch_input
 from .core.generation import process_generation_job
 from .models import BatchSummary, GenerationJob, GenerationResult
@@ -265,9 +269,9 @@ def generate_image_command(
                 session = aiohttp.ClientSession()
 
             try:
-                if backend_type == "cloud-tasks":
+                backend = get_backend(backend_type, config)
+                if isinstance(backend, CloudTasksExecutionBackend):
                     with Status("Dispatching to Cloud Tasks...", console=console):
-                        backend = CloudTasksExecutionBackend(config)
                         results = await backend.submit([job])
                         result = results[0]
                 else:
@@ -453,9 +457,9 @@ def generate_video_command(
                 session = aiohttp.ClientSession()
 
             try:
-                if backend_type == "cloud-tasks":
+                backend = get_backend(backend_type, config)
+                if isinstance(backend, CloudTasksExecutionBackend):
                     with Status("Dispatching to Cloud Tasks...", console=console):
-                        backend = CloudTasksExecutionBackend(config)
                         results = await backend.submit([job])
                         result = results[0]
                 else:
@@ -813,12 +817,12 @@ async def _async_run_batch(
             return
 
         # Initialize backend and start processing
-        if backend_type == "cloud-tasks":
-            backend = CloudTasksExecutionBackend(config)
-        else:
-            backend = LocalExecutionBackend(max_concurrent_jobs=concurrency)
+        backend = get_backend(backend_type, config, max_concurrent_jobs=concurrency)
 
-        console.print(f"\n[bold green]Starting batch processing ({backend_type})...[/bold green]")
+        console.print(
+            f"\n[bold green]Starting batch processing ({backend_type})...[/bold green]"
+        )
+
 
         # Create progress display
         with Progress(

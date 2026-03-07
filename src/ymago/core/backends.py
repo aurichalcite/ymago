@@ -534,9 +534,10 @@ class CloudTasksExecutionBackend(ExecutionBackend):
 
         # Dispatch the task
         # Note: create_task is a synchronous call in the standard client,
-        # but we can wrap it or use a thread pool if needed.
-        # For now, we'll call it directly as a placeholder.
-        return self.client.create_task(request={"parent": parent, "task": task})
+        # so we wrap it in to_thread to avoid blocking the event loop.
+        return await asyncio.to_thread(
+            self.client.create_task, request={"parent": parent, "task": task}
+        )
 
     async def submit(self, jobs: List[GenerationJob]) -> List[GenerationResult]:
         """
@@ -646,6 +647,27 @@ class CloudTasksExecutionBackend(ExecutionBackend):
             "queue_name": self.queue_name,
             "worker_url": self.worker_url,
         }
+
+
+def get_backend(backend_type: str, config: Settings, **kwargs: Any) -> ExecutionBackend:
+    """
+    Factory function to get the appropriate execution backend.
+
+    Args:
+        backend_type: Type of backend ('local' or 'cloud-tasks')
+        config: Application configuration
+        **kwargs: Additional arguments for backend initialization
+
+    Returns:
+        ExecutionBackend: An instance of the requested backend
+    """
+    if backend_type == "cloud-tasks":
+        return CloudTasksExecutionBackend(config)
+    elif backend_type == "local":
+        concurrency = kwargs.get("max_concurrent_jobs", 10)
+        return LocalExecutionBackend(max_concurrent_jobs=concurrency)
+    else:
+        raise ValueError(f"Unknown backend type: {backend_type}")
 
 
 class TokenBucketRateLimiter:
