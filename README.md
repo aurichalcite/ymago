@@ -251,13 +251,13 @@ retry_backoff_factor = 2.0
 
 ### Installation with Cloud Support
 
-Install ymago with cloud storage dependencies:
+Install ymago with cloud storage and distributed task support:
 
 ```bash
 # For AWS S3 support
 pip install "ymago[aws]"
 
-# For Google Cloud Storage support
+# For Google Cloud Storage and Tasks support
 pip install "ymago[gcp]"
 
 # For Cloudflare R2 support
@@ -266,6 +266,51 @@ pip install "ymago[r2]"
 # For all cloud providers
 pip install "ymago[cloud]"
 ```
+
+________________
+
+
+## ⚡ Distributed Execution Backend
+
+ymago supports distributed execution using Google Cloud Tasks (GCT). This allows you to offload generation jobs from your local machine to a scalable cloud queue, which then triggers serverless workers to perform the actual generation.
+
+### Distributed Generation
+
+To use the distributed backend, use the `--backend cloud-tasks` option with any generation command:
+
+```bash
+# Single image generation
+ymago image generate "A futuristic city" --backend cloud-tasks
+
+# Batch processing
+ymago batch run prompts.csv -o ./results/ --backend cloud-tasks
+```
+
+### Configuration
+
+Distributed execution requires several configuration settings. You can set these via environment variables or in your `ymago.toml` file.
+
+#### Environment Variables
+```bash
+export GCT_PROJECT_ID="your-project-id"
+export GCT_LOCATION="us-central1"
+export GCT_QUEUE_NAME="ymago-tasks"
+export GCT_WORKER_URL="https://your-worker-url.a.run.app"
+export GCT_SERVICE_ACCOUNT_EMAIL="ymago-client@your-project.iam.gserviceaccount.com"
+```
+
+#### Configuration File (`ymago.toml`)
+```toml
+[cloud_tasks]
+gct_project_id = "your-project-id"
+gct_location = "us-central1"
+gct_queue_name = "ymago-tasks"
+worker_url = "https://your-worker-url.a.run.app"
+service_account_email = "ymago-client@your-project.iam.gserviceaccount.com"
+```
+
+#### Authentication
+The Google Cloud Tasks backend uses OIDC tokens for secure authentication with your worker endpoint. Ensure the provided `service_account_email` has the `roles/cloudtasks.enqueuer` and `roles/iam.serviceAccountUser` roles, and your worker endpoint is configured to verify the OIDC token.
 
 ________________
 
