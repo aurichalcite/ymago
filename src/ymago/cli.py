@@ -25,7 +25,7 @@ from rich.status import Status
 from rich.table import Table
 
 from .config import load_config
-from .core.backends import LocalExecutionBackend
+from .core.backends import CloudTasksExecutionBackend, LocalExecutionBackend
 from .core.batch_parser import parse_batch_input
 from .core.generation import process_generation_job
 from .models import BatchSummary, GenerationJob, GenerationResult
@@ -172,6 +172,14 @@ def generate_image_command(
         Optional[str],
         typer.Option("--model", "-m", help="AI model to use for generation"),
     ] = None,
+    backend_type: Annotated[
+        str,
+        typer.Option(
+            "--backend",
+            help="Execution backend to use (local or cloud-tasks)",
+            rich_help_panel="Execution Control",
+        ),
+    ] = "local",
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output"),
@@ -193,6 +201,7 @@ def generate_image_command(
         ymago image generate "Transform this image" --from-image "https://.../image.jpg"
         ymago image generate "Cloud storage" -d "s3://my-bucket/images/"
         ymago image generate "With webhook" --webhook-url "https://api.example.com/webhook"
+        ymago image generate "Distributed" --backend cloud-tasks
     """
 
     async def _async_generate() -> None:
@@ -243,6 +252,8 @@ def generate_image_command(
                 negative_prompt=negative_prompt,
                 from_image=from_image,
                 image_model=model or config.defaults.image_model,
+                destination=destination,
+                webhook_url=webhook_url,
             )
 
             if verbose:
@@ -250,19 +261,25 @@ def generate_image_command(
 
             # Generate image with progress indication
             session = None
-            if webhook_url:
+            if webhook_url and backend_type == "local":
                 session = aiohttp.ClientSession()
 
             try:
-                with Status("Generating image...", console=console) as status:
-                    result = await process_generation_job(
-                        job,
-                        config,
-                        destination_url=destination,
-                        webhook_url=webhook_url,
-                        session=session,
-                    )
-                    status.update("Saving image...")
+                if backend_type == "cloud-tasks":
+                    with Status("Dispatching to Cloud Tasks...", console=console):
+                        backend = CloudTasksExecutionBackend(config)
+                        results = await backend.submit([job])
+                        result = results[0]
+                else:
+                    with Status("Generating image...", console=console) as status:
+                        result = await process_generation_job(
+                            job,
+                            config,
+                            destination_url=destination,
+                            webhook_url=webhook_url,
+                            session=session,
+                        )
+                        status.update("Saving image...")
             finally:
                 if session:
                     await session.close()
@@ -346,6 +363,14 @@ def generate_video_command(
             rich_help_panel="Output & Delivery",
         ),
     ] = None,
+    backend_type: Annotated[
+        str,
+        typer.Option(
+            "--backend",
+            help="Execution backend to use (local or cloud-tasks)",
+            rich_help_panel="Execution Control",
+        ),
+    ] = "local",
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output"),
@@ -363,6 +388,7 @@ def generate_video_command(
         ymago video generate "Ocean waves" --filename "waves" -s 42
         ymago video generate "Dancing" -a 9:16 -n "static"
         ymago video generate "Animate this image" --from-image "https://.../image.jpg"
+        ymago video generate "Distributed" --backend cloud-tasks
     """
 
     async def _async_generate_video() -> None:
@@ -414,6 +440,8 @@ def generate_video_command(
                 negative_prompt=negative_prompt,
                 from_image=from_image,
                 video_model=model or config.defaults.video_model,
+                destination=destination,
+                webhook_url=webhook_url,
             )
 
             if verbose:
@@ -421,22 +449,28 @@ def generate_video_command(
 
             # Generate video with progress indication
             session = None
-            if webhook_url:
+            if webhook_url and backend_type == "local":
                 session = aiohttp.ClientSession()
 
             try:
-                with Status(
-                    "Generating video (this may take several minutes)...",
-                    console=console,
-                ) as status:
-                    result = await process_generation_job(
-                        job,
-                        config,
-                        destination_url=destination,
-                        webhook_url=webhook_url,
-                        session=session,
-                    )
-                    status.update("Saving video...")
+                if backend_type == "cloud-tasks":
+                    with Status("Dispatching to Cloud Tasks...", console=console):
+                        backend = CloudTasksExecutionBackend(config)
+                        results = await backend.submit([job])
+                        result = results[0]
+                else:
+                    with Status(
+                        "Generating video (this may take several minutes)...",
+                        console=console,
+                    ) as status:
+                        result = await process_generation_job(
+                            job,
+                            config,
+                            destination_url=destination,
+                            webhook_url=webhook_url,
+                            session=session,
+                        )
+                        status.update("Saving video...")
             finally:
                 if session:
                     await session.close()
@@ -661,6 +695,14 @@ def run_batch_command(
             "--dry-run", help="Validate input and show plan without execution"
         ),
     ] = False,
+    backend_type: Annotated[
+        str,
+        typer.Option(
+            "--backend",
+            help="Execution backend to use (local or cloud-tasks)",
+            rich_help_panel="Execution Control",
+        ),
+    ] = "local",
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output"),
@@ -677,6 +719,7 @@ def run_batch_command(
         ymago batch run reqs.jsonl -o ./out/ -c 20
         ymago batch run data.csv -o ./res/ --resume -r 120
         ymago batch run prompts.csv -o ./test/ --dry-run
+        ymago batch run prompts.csv -o ./cloud/ --backend cloud-tasks
     """
     asyncio.run(
         _async_run_batch(
@@ -687,6 +730,7 @@ def run_batch_command(
             resume=resume,
             format_hint=format_hint,
             dry_run=dry_run,
+            backend_type=backend_type,
             verbose=verbose,
         )
     )
@@ -700,6 +744,7 @@ async def _async_run_batch(
     resume: bool,
     format_hint: Optional[str],
     dry_run: bool,
+    backend_type: str,
     verbose: bool,
 ) -> None:
     """Async implementation of batch processing command."""
@@ -723,7 +768,7 @@ async def _async_run_batch(
 
         # Load configuration
         with Status("Loading configuration...", console=console):
-            await load_config()
+            config = await load_config()
 
         if verbose:
             console.print("✓ Configuration loaded")
@@ -731,6 +776,7 @@ async def _async_run_batch(
             console.print(f"✓ Output directory: {output_dir}")
             console.print(f"✓ Concurrency: {concurrency}")
             console.print(f"✓ Rate limit: {rate_limit} requests/minute")
+            console.print(f"✓ Backend: {backend_type}")
 
         # Parse and validate input
         console.print("\n[bold blue]Parsing input file...[/bold blue]")
@@ -761,14 +807,18 @@ async def _async_run_batch(
             console.print(f"Would process {request_count} requests with:")
             console.print(f"  • Concurrency: {concurrency}")
             console.print(f"  • Rate limit: {rate_limit} requests/minute")
+            console.print(f"  • Backend: {backend_type}")
             estimated_time = _estimate_processing_time(request_count, rate_limit)
             console.print(f"  • Estimated time: {estimated_time}")
             return
 
         # Initialize backend and start processing
-        backend = LocalExecutionBackend(max_concurrent_jobs=concurrency)
+        if backend_type == "cloud-tasks":
+            backend = CloudTasksExecutionBackend(config)
+        else:
+            backend = LocalExecutionBackend(max_concurrent_jobs=concurrency)
 
-        console.print("\n[bold green]Starting batch processing...[/bold green]")
+        console.print(f"\n[bold green]Starting batch processing ({backend_type})...[/bold green]")
 
         # Create progress display
         with Progress(
