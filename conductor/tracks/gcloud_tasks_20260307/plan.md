@@ -1,0 +1,38 @@
+# Implementation Plan: Google Cloud Tasks Backend
+
+## Phase 1: Infrastructure & Configuration
+Implement the configuration schema and the basic skeleton of the `CloudTasksExecutionBackend`.
+
+- [ ] Task: Define `CloudTasksConfig` in `src/ymago/config.py`.
+    - [ ] Add `gct_project_id`, `gct_location`, `gct_queue_name`, `worker_url`, `service_account_email` fields.
+- [ ] Task: Implement `CloudTasksExecutionBackend` skeleton in `src/ymago/core/backends.py`.
+    - [ ] Inherit from `ExecutionBackend`.
+    - [ ] Implement `__init__` and stub methods for `submit`, `process_batch`, and `get_status`.
+- [ ] Task: Conductor - User Manual Verification 'Infrastructure & Configuration' (Protocol in workflow.md)
+
+## Phase 2: Task Dispatching Implementation
+Implement the logic to create tasks in the GCT queue and serialize the job payload.
+
+- [ ] Task: Integrate `google-cloud-tasks` client.
+    - [ ] Write tests for task payload serialization.
+    - [ ] Implement `_create_gct_task` helper method in `CloudTasksExecutionBackend`.
+- [ ] Task: Implement `submit(jobs)` method.
+    - [ ] Write tests for submitting multiple jobs.
+    - [ ] Implement dispatching logic with OIDC authentication support.
+- [ ] Task: Implement `process_batch(...)` method.
+    - [ ] Write tests for batch processing with the cloud backend.
+    - [ ] Implement asynchronous generator consumption and task dispatching.
+- [ ] Task: Conductor - User Manual Verification 'Task Dispatching Implementation' (Protocol in workflow.md)
+
+## Phase 3: CLI Integration & Final Verification
+Update the CLI to allow selecting the new backend and perform final validation.
+
+- [ ] Task: Update CLI to support `--backend cloud-tasks`.
+    - [ ] Modify `src/ymago/cli.py` to handle backend selection.
+    - [ ] Update `src/ymago/core/backends.py` factory function (if one exists) or logic.
+- [ ] Task: Integration tests with Mock GCT Client.
+    - [ ] Create `tests/core/test_gct_backend.py`.
+    - [ ] Verify full flow from CLI to mock task creation.
+- [ ] Task: Update documentation.
+    - [ ] Add GCT setup guide to `README.md` or a new documentation file.
+- [ ] Task: Conductor - User Manual Verification 'CLI Integration & Final Verification' (Protocol in workflow.md)
