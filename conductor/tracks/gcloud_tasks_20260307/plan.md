@@ -5,7 +5,7 @@ Implement the configuration schema and the basic skeleton of the `CloudTasksExec
 
 - [x] Task: Define `CloudTasksConfig` in `src/ymago/config.py`. [f95084e]
     - [ ] Add `gct_project_id`, `gct_location`, `gct_queue_name`, `worker_url`, `service_account_email` fields.
-- [ ] Task: Implement `CloudTasksExecutionBackend` skeleton in `src/ymago/core/backends.py`.
+- [x] Task: Implement `CloudTasksExecutionBackend` skeleton in `src/ymago/core/backends.py`. [e7e2521]
     - [ ] Inherit from `ExecutionBackend`.
     - [ ] Implement `__init__` and stub methods for `submit`, `process_batch`, and `get_status`.
 - [ ] Task: Conductor - User Manual Verification 'Infrastructure & Configuration' (Protocol in workflow.md)
