@@ -8,7 +8,7 @@ Implement the configuration schema and the basic skeleton of the `CloudTasksExec
 - [x] Task: Implement `CloudTasksExecutionBackend` skeleton in `src/ymago/core/backends.py`. [e7e2521]
     - [ ] Inherit from `ExecutionBackend`.
     - [ ] Implement `__init__` and stub methods for `submit`, `process_batch`, and `get_status`.
-- [ ] Task: Conductor - User Manual Verification 'Infrastructure & Configuration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Infrastructure & Configuration' (Protocol in workflow.md) [79e0ea5]
 
 ## Phase 2: Task Dispatching Implementation
 Implement the logic to create tasks in the GCT queue and serialize the job payload.
