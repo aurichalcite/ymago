@@ -10,7 +10,7 @@ Implement the configuration schema and the basic skeleton of the `CloudTasksExec
     - [ ] Implement `__init__` and stub methods for `submit`, `process_batch`, and `get_status`.
 - [x] Task: Conductor - User Manual Verification 'Infrastructure & Configuration' (Protocol in workflow.md) [79e0ea5]
 
-## Phase 2: Task Dispatching Implementation
+## Phase 2: Task Dispatching Implementation [checkpoint: 0a4969b]
 Implement the logic to create tasks in the GCT queue and serialize the job payload.
 
 - [x] Task: Integrate `google-cloud-tasks` client. [48afbf2]
