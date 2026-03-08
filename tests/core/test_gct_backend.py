@@ -46,7 +46,9 @@ class TestCloudTasksExecutionBackendSkeleton:
         backend = CloudTasksExecutionBackend(config)
 
         # These should exist and not raise NotImplementedError if they are stubs
-        # (though the protocol says implement stubs, usually meaning they return something or are pass)
+        # (though the protocol says implement stubs, 
+        # usually meaning they return something or pass)
+        
         assert hasattr(backend, "submit")
         assert hasattr(backend, "process_batch")
         assert hasattr(backend, "get_status")
