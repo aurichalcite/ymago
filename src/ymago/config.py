@@ -103,6 +103,30 @@ class WebhookConfig(BaseModel):
     )
 
 
+class CloudTasksConfig(BaseModel):
+    """Google Cloud Tasks configuration for distributed generation."""
+
+    gct_project_id: Optional[str] = Field(
+        default=None, description="Google Cloud project ID for Cloud Tasks"
+    )
+
+    gct_location: str = Field(
+        default="us-central1", description="Google Cloud region for Cloud Tasks"
+    )
+
+    gct_queue_name: str = Field(
+        default="ymago-tasks", description="Google Cloud Tasks queue name"
+    )
+
+    worker_url: Optional[str] = Field(
+        default=None, description="The HTTP endpoint where the worker receives tasks"
+    )
+
+    service_account_email: Optional[str] = Field(
+        default=None, description="Service account email for OIDC authentication"
+    )
+
+
 class Defaults(BaseModel):
     """Default configuration values for media generation."""
 
@@ -141,6 +165,7 @@ class Settings(BaseModel):
     defaults: Defaults = Field(default_factory=Defaults)
     cloud_storage: CloudStorageConfig = Field(default_factory=CloudStorageConfig)
     webhooks: WebhookConfig = Field(default_factory=WebhookConfig)
+    cloud_tasks: CloudTasksConfig = Field(default_factory=CloudTasksConfig)
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
 
@@ -271,6 +296,32 @@ async def load_config() -> Settings:
 
     if webhook_overrides:
         env_overrides["webhooks"] = webhook_overrides
+
+    # Google Cloud Tasks configuration from environment
+    gct_overrides: dict[str, Any] = {}
+
+    gct_project_id = os.getenv("GCT_PROJECT_ID")
+    if gct_project_id:
+        gct_overrides["gct_project_id"] = gct_project_id
+
+    gct_location = os.getenv("GCT_LOCATION")
+    if gct_location:
+        gct_overrides["gct_location"] = gct_location
+
+    gct_queue_name = os.getenv("GCT_QUEUE_NAME")
+    if gct_queue_name:
+        gct_overrides["gct_queue_name"] = gct_queue_name
+
+    gct_worker_url = os.getenv("GCT_WORKER_URL")
+    if gct_worker_url:
+        gct_overrides["worker_url"] = gct_worker_url
+
+    gct_service_account = os.getenv("GCT_SERVICE_ACCOUNT_EMAIL")
+    if gct_service_account:
+        gct_overrides["service_account_email"] = gct_service_account
+
+    if gct_overrides:
+        env_overrides["cloud_tasks"] = gct_overrides
 
     # Merge environment overrides
     if env_overrides:

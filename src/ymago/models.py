@@ -80,6 +80,16 @@ class GenerationJob(BaseModel):
         pattern=r"^\d+:\d+$",
     )
 
+    destination: Optional[str] = Field(
+        default=None,
+        description="Cloud storage destination URL (e.g., gs://bucket/path/file.png)",
+    )
+
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL to notify upon completion",
+    )
+
     @field_validator("prompt")
     @classmethod
     def validate_prompt(cls, v: str) -> str:
@@ -280,6 +290,16 @@ class GenerationRequest(BaseModel):
         pattern="^\\d+:\\d+$",
     )
 
+    destination: Optional[str] = Field(
+        default=None,
+        description="Cloud storage destination URL",
+    )
+
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL to notify upon completion",
+    )
+
     image_model: str = Field(
         default=DEFAULT_IMAGE_MODEL,
         description="AI model to use for image generation",
@@ -310,6 +330,8 @@ class GenerationRequest(BaseModel):
             aspect_ratio=self.aspect_ratio,
             image_model=self.image_model,
             video_model=self.video_model,
+            destination=self.destination,
+            webhook_url=self.webhook_url,
         )
 
     model_config = ConfigDict(validate_assignment=True, extra="forbid")

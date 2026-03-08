@@ -35,6 +35,8 @@ dependencies = [
     "aiocsv>=1.3.2",
     "aiofiles>=24.1.0",
     "aiohttp>=3.12.15",
+    "google-auth>=2.40.3",
+    "google-cloud-tasks>=2.21.0",
     "google-genai>=1.36.0",
     "pydantic>=2.0,<3.0",
     "rich>=14.1.0",
@@ -85,6 +87,8 @@ aws = [
 ]
 gcp = [
     "gcloud-aio-storage>=9.3.0",
+    "google-cloud-tasks>=2.21.0",
+    "google-auth>=2.38.0",
 ]
 r2 = [
     "aioboto3>=13.2.0",
@@ -94,6 +98,8 @@ cloud = [
     "aioboto3>=13.2.0",
     "botocore>=1.35.0",
     "gcloud-aio-storage>=9.3.0",
+    "google-cloud-tasks>=2.21.0",
+    "google-auth>=2.38.0",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -114,6 +120,7 @@ ymago = "ymago.cli:app"
 [dependency-groups]
 dev = [
     "basedpyright>=1.31.4",
+    "ptpython>=3.0.32",
 ]
 
 [tool.ruff]
