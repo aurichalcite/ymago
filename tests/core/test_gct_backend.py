@@ -3,6 +3,7 @@ Tests for Google Cloud Tasks execution backend.
 """
 
 import pytest
+
 pytest.importorskip("google.cloud.tasks")
 
 from ymago.config import Auth, CloudTasksConfig, Settings

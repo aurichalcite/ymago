@@ -600,16 +600,13 @@ class CloudTasksExecutionBackend(ExecutionBackend):
         semaphore = asyncio.Semaphore(concurrency)
 
         async def dispatch_single(request: GenerationRequest) -> bool:
-            nonlocal successful, failed
             async with semaphore:
                 try:
                     job = request.to_generation_job()
                     await self._create_gct_task(job)
-                    successful += 1
                     return True
                 except Exception as e:
                     logger.error(f"Failed to dispatch request {request.id}: {e}")
-                    failed += 1
                     return False
 
         # Consume the generator and dispatch
@@ -619,7 +616,9 @@ class CloudTasksExecutionBackend(ExecutionBackend):
             tasks.append(dispatch_single(request))
 
         if tasks:
-            await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks)
+            successful = sum(1 for r in results if r)
+            failed = len(results) - successful
 
         end_time = time.time()
         processing_time = end_time - start_time

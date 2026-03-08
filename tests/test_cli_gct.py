@@ -3,6 +3,7 @@ Tests for Google Cloud Tasks CLI integration.
 """
 
 import pytest
+
 pytest.importorskip("google.cloud.tasks")
 
 from pathlib import Path
@@ -50,7 +51,8 @@ class TestCLIGCTIntegration:
                 mock_get_backend.return_value = mock_backend
 
                 result = self.runner.invoke(
-                    app, ["image", "generate", "test prompt", "--backend", "cloud-tasks"]
+                    app,
+                    ["image", "generate", "test prompt", "--backend", "cloud-tasks"],
                 )
 
                 assert result.exit_code == 0
@@ -73,9 +75,13 @@ class TestCLIGCTIntegration:
                 ) as mock_process:
                     mock_load.return_value = sample_config
                     mock_process.return_value = mock_result
-                    mock_get_backend.return_value = MagicMock(spec=LocalExecutionBackend)
+                    mock_get_backend.return_value = MagicMock(
+                        spec=LocalExecutionBackend
+                    )
 
-                    result = self.runner.invoke(app, ["image", "generate", "test prompt"])
+                    result = self.runner.invoke(
+                        app, ["image", "generate", "test prompt"]
+                    )
 
                     assert result.exit_code == 0
                     mock_get_backend.assert_called_once()
@@ -97,7 +103,8 @@ class TestCLIGCTIntegration:
                 mock_get_backend.return_value = mock_backend
 
                 result = self.runner.invoke(
-                    app, ["video", "generate", "test prompt", "--backend", "cloud-tasks"]
+                    app,
+                    ["video", "generate", "test prompt", "--backend", "cloud-tasks"],
                 )
 
                 assert result.exit_code == 0

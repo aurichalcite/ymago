@@ -27,7 +27,6 @@ from rich.table import Table
 from .config import load_config
 from .core.backends import (
     CloudTasksExecutionBackend,
-    LocalExecutionBackend,
     get_backend,
 )
 from .core.batch_parser import parse_batch_input
@@ -822,7 +821,6 @@ async def _async_run_batch(
         console.print(
             f"\n[bold green]Starting batch processing ({backend_type})...[/bold green]"
         )
-
 
         # Create progress display
         with Progress(

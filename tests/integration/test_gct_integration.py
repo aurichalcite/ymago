@@ -3,6 +3,7 @@ Integration tests for Google Cloud Tasks backend.
 """
 
 import pytest
+
 pytest.importorskip("google.cloud.tasks")
 
 from pathlib import Path
@@ -39,7 +40,10 @@ class TestGCTIntegration:
 
             with patch("ymago.cli.load_config", return_value=sample_config):
                 from ymago.core.backends import get_backend
-                with patch("ymago.cli.get_backend", wraps=get_backend) as mock_get_backend:
+
+                with patch(
+                    "ymago.cli.get_backend", wraps=get_backend
+                ) as mock_get_backend:
                     # Run CLI command
                     result = self.runner.invoke(
                         app,
@@ -86,7 +90,10 @@ class TestGCTIntegration:
 
             with patch("ymago.cli.load_config", return_value=sample_config):
                 from ymago.core.backends import get_backend
-                with patch("ymago.cli.get_backend", wraps=get_backend) as mock_get_backend:
+
+                with patch(
+                    "ymago.cli.get_backend", wraps=get_backend
+                ) as mock_get_backend:
                     result = self.runner.invoke(
                         app,
                         [
